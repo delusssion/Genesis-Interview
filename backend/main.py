@@ -28,3 +28,7 @@ app.add_middleware(
 )
 
 app.include_router(router_openai)
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "service": "backend"}
