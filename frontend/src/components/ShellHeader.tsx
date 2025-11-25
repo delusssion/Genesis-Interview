@@ -1,6 +1,11 @@
 import { env } from '../shared/config/env'
 
-export function ShellHeader() {
+type Props = {
+  theme: 'light' | 'dark'
+  onToggleTheme: () => void
+}
+
+export function ShellHeader({ theme, onToggleTheme }: Props) {
   return (
     <header className="shell-header">
       <div className="brand">
@@ -20,6 +25,9 @@ export function ShellHeader() {
           )}
         </div>
         <div className="pill pill-accent">LLM / runner: stub</div>
+        <button className="ghost-btn" type="button" onClick={onToggleTheme}>
+          {theme === 'light' ? 'Dark theme' : 'Light theme'}
+        </button>
       </div>
     </header>
   )
