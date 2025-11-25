@@ -2,7 +2,7 @@ from fastapi.routing import APIRouter
 from openai import OpenAI
 
 from schemas.user_message import UserMessageSchema
-from dependencies import BASE_URL
+from config import BASE_URL
 from prompts import SYSTEM_SETTING_INTERVIEWER, SYSTEM_START_MESSAGE
 
 
@@ -27,12 +27,13 @@ def openai_start():
 
 
 @router.post("/message", description="Send message to LLM and get answer back")
-def openai_message(msg: UserMessageSchema):
+def openai_message(user_message: UserMessageSchema):
+    message = user_message.message
     resp = client.chat.completions.create(
         model="qwen3-32b-awq",
         messages=[
             {"role": "system", "content": SYSTEM_SETTING_INTERVIEWER},
-            {"role": "user", "content": msg.message},
+            {"role": "user", "content": message},
         ],
         temperature=0.4,
         max_tokens=4096,
