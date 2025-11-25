@@ -8,14 +8,14 @@ import json
 
 from schemas import ChatMessageSchema, StartInterviewSchema
 from models import SessionsModel
-from config import BASE_URL
+from config import BASE_URL, OPENAI_API_KEY
 from prompts import INTERVIEWER_PROMPT, INTERVIEWER_STAGE_PROMPTS
 from dependencies import verify_access_token, sessionDep
 
 
 router = APIRouter(tags=["Chat"])
 
-client = OpenAI(base_url=BASE_URL)
+client = OpenAI(base_url=BASE_URL, api_key=OPENAI_API_KEY)
 
 
 @router.post("/interview/start")
