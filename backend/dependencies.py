@@ -1,10 +1,8 @@
-from dotenv import load_dotenv
-from os import environ
+from typing import Annotated
+from fastapi import Depends
+from sqlalchemy.ext.asyncio.session import AsyncSession
+
+from database import db
 
 
-load_dotenv()
-
-
-BASE_URL = environ.get("BASE_URL")
-if BASE_URL is None:
-    raise EnvironmentError("BASE_URL key not found in environment")
+sessionDep = Annotated[AsyncSession, Depends(db.get_session)]
