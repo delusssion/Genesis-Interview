@@ -1,6 +1,7 @@
 from fastapi import Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRouter
+from sqlalchemy import update
 from openai import OpenAI
 import asyncio
 import json
@@ -8,7 +9,7 @@ import json
 from schemas import ChatMessageSchema, StartInterviewSchema
 from models import SessionsModel
 from config import BASE_URL
-from prompts import SYSTEM_INTERVIEWER
+from prompts import INTERVIEWER_PROMPT, INTERVIEWER_STAGE_PROMPTS
 from dependencies import verify_access_token, sessionDep
 
 
@@ -33,7 +34,7 @@ async def interview_start(
         new_session = SessionsModel(
             track=data.track,
             level=data.level,
-            preffered_language=data.preferred_language,
+            preferred_language=data.preferred_language,
             locale=data.locale,
             state="idle",
         )
@@ -48,13 +49,23 @@ async def interview_start(
 
 @router.get("/chat/stream")
 async def chat_stream(
-    session_id: int, request: Request, is_token_valid=Depends(verify_access_token)
+    session_id: int,
+    request: Request,
+    session: sessionDep,
+    is_token_valid=Depends(verify_access_token),
 ):
 
     if not is_token_valid:
         raise HTTPException(
             status_code=401, detail="Access token not found or invalid or expired"
         )
+
+    ses = await session.get(SessionsModel, session_id)
+    ses_msg = ses.history[-1] if len(ses.history) != 0 else "привет"
+    ses_state = ses.state
+    ses_task = ses.current_task
+
+    llm_msg = json.dumps({"message": ses_msg, "cur_state": ses_state, "task": ses_task})
 
     async def event_generator():
         try:
@@ -64,8 +75,9 @@ async def chat_stream(
             stream = client.chat.completions.create(
                 model="qwen3-32b-awq",
                 messages=[
-                    {"role": "system", "content": SYSTEM_INTERVIEWER},
-                    {"role": "user", "content": ""},
+                    {"role": "system", "content": INTERVIEWER_PROMPT},
+                    {"role": "system", "content": INTERVIEWER_STAGE_PROMPTS[ses_state]},
+                    {"role": "user", "content": llm_msg},
                 ],
                 stream=True,
             )
@@ -107,8 +119,8 @@ async def chat_stream(
 @router.post("/chat/send")
 async def chat_send(
     session_id: int,
-    message: ChatMessageSchema,
-    request: Request,
+    chat_message: ChatMessageSchema,
+    session: sessionDep,
     is_token_valid=Depends(verify_access_token),
 ):
 
@@ -117,4 +129,19 @@ async def chat_send(
             status_code=401, detail="Access token not found or invalid or expired"
         )
 
-    ...
+    try:
+        ses = await session.get(SessionsModel, session_id)
+        ses_history = ses.history
+        ses_history.append(chat_message.message)
+
+        query = (
+            update(SessionsModel)
+            .where(SessionsModel.session_id == session_id)
+            .values(history=ses_history)
+        )
+        await session.execute(query)
+        await session.commit()
+
+        return {"success": True}
+    except:
+        return {"success": False}

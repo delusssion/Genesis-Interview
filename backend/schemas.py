@@ -20,7 +20,6 @@ class StartInterviewSchema(BaseModel):
     track: Literal["backend", "frontend", "data", "ml"]
     level: Literal["junior", "middle", "senior"]
     preferred_language: Literal["typescript", "python", "go"]
-    user_id: str
     locale: Optional[str]
 
 
