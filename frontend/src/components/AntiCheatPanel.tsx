@@ -5,6 +5,7 @@ import {
   type AntiCheatSignal,
   type AntiCheatType,
 } from '../shared/api/antiCheatMock'
+import { sendAnticheat } from '../shared/api/telemetry'
 
 const labels: Record<AntiCheatType, string> = {
   copy: 'Копирование',
@@ -26,11 +27,18 @@ const colors: Record<AntiCheatType, string> = {
   devtools: 'status-failed',
 }
 
-export function AntiCheatPanel() {
+type Props = {
+  sessionId: number | null
+}
+
+export function AntiCheatPanel({ sessionId }: Props) {
   const [signals, setSignals] = useState<AntiCheatSignal[]>([])
+  const [buffer, setBuffer] = useState<AntiCheatSignal[]>([])
+  const [sending, setSending] = useState(false)
 
   const addSignal = (sig: AntiCheatSignal) => {
     setSignals((prev) => [sig, ...prev].slice(0, 12))
+    setBuffer((prev) => [...prev, sig])
   }
 
   useEffect(() => {
@@ -39,6 +47,24 @@ export function AntiCheatPanel() {
     })
     return () => stop()
   }, [])
+
+  useEffect(() => {
+    if (!sessionId || buffer.length === 0 || sending) return
+    const controller = new AbortController()
+    const flush = async () => {
+      try {
+        setSending(true)
+        await sendAnticheat(sessionId, buffer.map((b) => ({ type: b.type, at: b.at, meta: b.meta })))
+        setBuffer([])
+      } catch (e) {
+        console.error('Telemetry send failed', e)
+      } finally {
+        setSending(false)
+      }
+    }
+    flush()
+    return () => controller.abort()
+  }, [buffer, sessionId, sending])
 
   const counts = useMemo(() => {
     return signals.reduce<Record<AntiCheatType, number>>(
@@ -65,8 +91,8 @@ export function AntiCheatPanel() {
           <p className="eyebrow">Шаг 6 · анти-чит</p>
           <h2>Сигналы фронта</h2>
           <p className="muted">
-            Отслеживаем copy/paste, blur/focus, видимость вкладки, простейший DevTools. Сейчас
-            моки; дальше отправим эти события на бек телеметрии.
+            Отслеживаем copy/paste, blur/focus, видимость вкладки, DevTools и отправляем события на
+            бек телеметрии (если есть session_id).
           </p>
         </div>
         <div className="pill pill-ghost">Listening</div>

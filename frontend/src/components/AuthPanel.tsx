@@ -1,5 +1,7 @@
 import { type FormEvent, useState } from 'react'
-import { authMock, type AuthMode } from '../shared/api/authMock'
+import { login, register } from '../shared/api/auth'
+
+type AuthMode = 'login' | 'register'
 
 const initialState = {
   email: '',
@@ -19,19 +21,19 @@ export function AuthPanel() {
     setStatus('loading')
     setMessage('')
 
-    const resp = await authMock(mode, {
-      email: form.email,
-      nickname: form.nickname,
-      password: form.password,
-      confirmPassword: form.confirmPassword,
-    })
-
-    if (resp.success) {
-      setStatus('ok')
-      setMessage(`Успех. Токен: ${resp.token}`)
-    } else {
+    try {
+      if (mode === 'login') {
+        await login(form.nickname, form.password)
+        setStatus('ok')
+        setMessage('Успешный вход')
+      } else {
+        await register(form.email, form.nickname, form.password)
+        setStatus('ok')
+        setMessage('Успешная регистрация')
+      }
+    } catch (e) {
       setStatus('error')
-      setMessage(resp.error)
+      setMessage((e as Error).message)
     }
   }
 

@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 type Track = {
   id: string
   title: string
@@ -32,7 +34,20 @@ const tracks: Track[] = [
 
 const levels = ['Junior', 'Middle', 'Senior']
 
-export function TrackSelection() {
+type Props = {
+  onStart: (opts: {
+    track: 'frontend' | 'backend' | 'data' | 'ml'
+    level: 'junior' | 'middle' | 'senior'
+    language: 'typescript' | 'python' | 'go'
+  }) => void
+  isStarting: boolean
+}
+
+export function TrackSelection({ onStart, isStarting }: Props) {
+  const [selectedTrack, setSelectedTrack] = useState<'frontend' | 'backend' | 'data' | 'ml'>('frontend')
+  const [selectedLevel, setSelectedLevel] = useState<'junior' | 'middle' | 'senior'>('junior')
+  const [language, setLanguage] = useState<'typescript' | 'python' | 'go'>('typescript')
+
   return (
     <div className="panel">
       <div className="panel-head">
@@ -44,22 +59,40 @@ export function TrackSelection() {
             Scibox, отслеживаем прогресс и анти-чит.
           </p>
         </div>
-        <button className="cta" type="button">
-          Начать мок-интервью
+        <button
+          className="cta"
+          type="button"
+          disabled={isStarting}
+          onClick={() => onStart({ track: selectedTrack, level: selectedLevel, language })}
+        >
+          {isStarting ? 'Запуск...' : 'Начать интервью'}
         </button>
       </div>
 
       <div className="levels">
-        {levels.map((level) => (
-          <div key={level} className="level-pill">
-            {level}
-          </div>
-        ))}
+        {levels.map((level) => {
+          const value = level.toLowerCase() as 'junior' | 'middle' | 'senior'
+          return (
+            <button
+              key={level}
+              type="button"
+              className={`level-pill ${selectedLevel === value ? 'selected' : ''}`}
+              onClick={() => setSelectedLevel(value)}
+            >
+              {level}
+            </button>
+          )
+        })}
       </div>
 
       <div className="tracks-grid">
         {tracks.map((track) => (
-          <div key={track.id} className="track-card">
+          <button
+            key={track.id}
+            className={`track-card ${selectedTrack === track.id ? 'selected' : ''}`}
+            onClick={() => setSelectedTrack(track.id as 'frontend' | 'backend' | 'data' | 'ml')}
+            type="button"
+          >
             <div className="track-header">
               <span className={`status status-${track.status}`}>
                 {track.status === 'ready'
@@ -73,7 +106,20 @@ export function TrackSelection() {
             <h3>{track.title}</h3>
             <p className="muted">{track.stack}</p>
             <p className="muted">{track.focus}</p>
-          </div>
+          </button>
+        ))}
+      </div>
+
+      <div className="levels">
+        {['typescript', 'python', 'go'].map((lang) => (
+          <button
+            key={lang}
+            type="button"
+            className={`level-pill ${language === lang ? 'selected' : ''}`}
+            onClick={() => setLanguage(lang as 'typescript' | 'python' | 'go')}
+          >
+            {lang}
+          </button>
         ))}
       </div>
     </div>
