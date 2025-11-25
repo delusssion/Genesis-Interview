@@ -3,9 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from routes.openai import router as router_openai
+from routes.user import router as router_user
 from config import FRONTEND_ORIGIN
 from database import db
-from tables.user import UserTable
+from models.user import UserModel
 
 
 @asynccontextmanager
@@ -27,4 +28,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(router_user)
 app.include_router(router_openai)

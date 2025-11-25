@@ -13,7 +13,7 @@ def decode_token(token: str) -> dict[str, Any]:
         return None
 
 
-def encode_token(type: str, uid: str) -> str:
+def encode_token(type: str, uid: int) -> str:
     expiry = datetime.now()
     if type == 'access_token':
         expiry += timedelta(minutes=JWT_ACCESS_TOKEN_EXPIRES_MINUTES)
@@ -21,8 +21,7 @@ def encode_token(type: str, uid: str) -> str:
         expiry += timedelta(days=JWT_REFRESH_TOKEN_EXPIRES_DAYS)
     
     try:
-        token = jwt.encode({ 'sub': uid, 'exp': expiry })
-        
+        token = jwt.encode({ 'sub': str(uid), 'exp': expiry }, key=JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
         return token
     except JWTError:
         return None
