@@ -25,3 +25,13 @@ class SessionsModel(Base):
     history: Mapped[list[str]] = mapped_column(ARRAY(String), default=[], nullable=False)
     current_task: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     state: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class TelemetryEventModel(Base):
+    __tablename__ = "telemetry_event"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    type: Mapped[str] = mapped_column(String, nullable=False)
+    at: Mapped[str] = mapped_column(String, nullable=False)
+    meta: Mapped[Optional[str]] = mapped_column(String, nullable=True)

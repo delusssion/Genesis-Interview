@@ -39,3 +39,12 @@ app.include_router(router_telemetry)
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/migrations")
+def migrations_note():
+    """
+    Предупреждение: миграций нет, таблицы создаются с нуля. 
+    При изменениях схемы требуется пересоздание БД или добавить Alembic.
+    """
+    return {"note": "No migrations. Recreate DB or add Alembic when schema changes."}

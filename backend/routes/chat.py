@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRouter
-from sqlalchemy import update
+from sqlalchemy import select, update
 from openai import OpenAI
 import asyncio
 import json
@@ -61,11 +61,32 @@ async def chat_stream(
         )
 
     ses = await session.get(SessionsModel, session_id)
-    ses_msg = ses.history[-1] if len(ses.history) != 0 else "привет"
-    ses_state = ses.state
-    ses_task = ses.current_task
+    if ses is None:
+        raise HTTPException(status_code=404, detail="Session not found")
 
-    llm_msg = json.dumps({"message": ses_msg, "cur_state": ses_state, "task": ses_task})
+    def parse_history(raw_history: list[str]) -> list[dict]:
+        parsed = []
+        for item in raw_history:
+            try:
+                parsed.append(json.loads(item))
+            except Exception:
+                parsed.append({"role": "user", "content": item})
+        return parsed
+
+    history = parse_history(ses.history)
+    last_user_message = (
+        next((msg["content"] for msg in reversed(history) if msg.get("role") == "user"), None)
+        or "привет"
+    )
+    llm_msg = json.dumps(
+        {
+            "history": history,
+            "message": last_user_message,
+            "cur_state": ses.state,
+            "task": ses.current_task,
+        },
+        ensure_ascii=False,
+    )
 
     async def event_generator():
         try:
@@ -76,13 +97,15 @@ async def chat_stream(
                 model="qwen3-32b-awq",
                 messages=[
                     {"role": "system", "content": INTERVIEWER_PROMPT},
-                    {"role": "system", "content": INTERVIEWER_STAGE_PROMPTS[ses_state]},
+                    {"role": "system", "content": INTERVIEWER_STAGE_PROMPTS.get(ses.state, "")},
                     {"role": "user", "content": llm_msg},
                 ],
                 stream=True,
             )
 
             final_text = ""
+            heartbeat_interval = 10
+            last_heartbeat = asyncio.get_event_loop().time()
 
             for chunk in stream:
                 if await request.is_disconnected():
@@ -96,6 +119,11 @@ async def chat_stream(
                     yield f"event: delta\ndata: {payload}\n\n"
 
                 await asyncio.sleep(0)
+
+                now = asyncio.get_event_loop().time()
+                if now - last_heartbeat > heartbeat_interval:
+                    yield "event: heartbeat\ndata: {}\n\n"
+                    last_heartbeat = now
 
             event = json.dumps({"final": final_text}, ensure_ascii=False)
             # Event: final
@@ -130,9 +158,17 @@ async def chat_send(
         )
 
     try:
-        ses = await session.get(SessionsModel, session_id)
-        ses_history = ses.history
-        ses_history.append(chat_message.message)
+        db_ses = await session.execute(
+            select(SessionsModel).where(SessionsModel.session_id == session_id)
+        )
+        ses = db_ses.scalar_one_or_none()
+        if ses is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        ses_history = ses.history or []
+        ses_history.append(
+            json.dumps({"role": "user", "content": chat_message.message}, ensure_ascii=False)
+        )
 
         query = (
             update(SessionsModel)
@@ -143,5 +179,7 @@ async def chat_send(
         await session.commit()
 
         return {"success": True}
-    except:
-        return {"success": False}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
