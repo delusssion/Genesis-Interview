@@ -548,6 +548,51 @@
   align-items: center;
 }
 
+.auth-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.auth-form {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.auth-form .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-form .field input {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--stroke);
+  background: var(--glass);
+  color: var(--text);
+}
+
+.auth-message {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--stroke);
+}
+
+.auth-message.ok {
+  background: rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.4);
+  color: #16a34a;
+}
+
+.auth-message.error {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #b91c1c;
+}
+
 @media (max-width: 720px) {
   .shell-header {
     flex-direction: column;
