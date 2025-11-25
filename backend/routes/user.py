@@ -1,16 +1,21 @@
-from fastapi import Cookie, HTTPException, Response
+from fastapi import Depends, HTTPException, Response
 from fastapi.routing import APIRouter
+from sqlalchemy import select
+from pwdlib.hashers.argon2 import Argon2Hasher
 
 from auth import decode_token, encode_token
-from dependencies import sessionDep
-from schemas.user_auth import UserLoginSchema, UserRegisterSchema
+from dependencies import sessionDep, get_access_token, get_refresh_token
+from schemas import UserLoginSchema, UserRegisterSchema
+from models import UserModel
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
+hasher = Argon2Hasher()
+
 
 @router.get("/me")
-async def auth_get_me(access_token: str = Cookie(alias="access_token")):
+async def auth_get_me(access_token=Depends(get_access_token)):
     if not access_token:
         raise HTTPException(status_code=401, detail="Access token not found")
 
@@ -24,7 +29,7 @@ async def auth_get_me(access_token: str = Cookie(alias="access_token")):
 
 @router.get("/refresh")
 async def auth_get_refresh(
-    response: Response, refresh_token: str = Cookie(alias="refresh_token")
+    response: Response, refresh_token=Depends(get_refresh_token)
 ):
     if not refresh_token:
         raise HTTPException(status_code=401, detail="Refresh token not found")
@@ -34,22 +39,73 @@ async def auth_get_refresh(
     if payload:
         uid = payload.get("sub")
 
-        new_access_token = encode_token("access", uid)
-        new_refresh_token = encode_token("refresh", uid)
+        new_access_token = encode_token("access_token", uid)
+        new_refresh_token = encode_token("refresh_token", uid)
 
-        response.set_cookie("access_token", new_access_token)
-        response.set_cookie("refresh_token", new_refresh_token)
+        cookie_params = {"httponly": True, "samesite": "lax"}
+        response.set_cookie("access_token", new_access_token, **cookie_params)
+        response.set_cookie("refresh_token", new_refresh_token, **cookie_params)
 
         return {"success": True}
     else:
         return {"success": False, "detail": "Token is invalid or expired"}
 
 
-@router.post('/register')
-async def auth_post_register(user_register: UserRegisterSchema, response: Response, session: sessionDep):
-    ...
+@router.post("/register")
+async def auth_post_register(user_register: UserRegisterSchema, session: sessionDep):
+    if user_register.password != user_register.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
+
+    existing_nick = await session.execute(
+        select(UserModel).where(UserModel.nickname == user_register.nickname)
+    )
+    if existing_nick.scalar_one_or_none() is not None:
+        raise HTTPException(
+            status_code=409, detail="User with such nickname already registered"
+        )
+
+    existing_email = await session.execute(
+        select(UserModel).where(UserModel.email == user_register.email)
+    )
+    if existing_email.scalar_one_or_none() is not None:
+        raise HTTPException(
+            status_code=409, detail="User with such email already registered"
+        )
+
+    hashed_password = hasher.hash(user_register.password)
+    user = UserModel(
+        nickname=user_register.nickname,
+        email=user_register.email,
+        password=hashed_password,
+    )
+
+    session.add(user)
+    await session.commit()
+
+    return {"success": True}
 
 
-@router.post('/login')
-async def auth_post_login(user_login: UserLoginSchema, response: Response, session: sessionDep):
-    ...
+@router.post("/login")
+async def auth_post_login(
+    user_login: UserLoginSchema, response: Response, session: sessionDep
+):
+    query = select(UserModel).where(UserModel.nickname == user_login.nickname)
+    result = await session.execute(query)
+
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=401, detail="User with such nickname doesnt exist"
+        )
+
+    if not hasher.verify(user_login.password, user.password):
+        raise HTTPException(status_code=401, detail="Wrong password")
+
+    access_token = encode_token("access_token", user.uid)
+    refresh_token = encode_token("refresh_token", user.uid)
+
+    cookie_params = {"httponly": True, "samesite": "lax"}
+    response.set_cookie("access_token", access_token, **cookie_params)
+    response.set_cookie("refresh_token", refresh_token, **cookie_params)
+
+    return {"success": True}
