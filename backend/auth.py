@@ -1,6 +1,6 @@
 from typing import Any
 from jose import jwt, JWTError
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_ACCESS_TOKEN_EXPIRES_MINUTES, JWT_REFRESH_TOKEN_EXPIRES_DAYS
 
@@ -14,7 +14,7 @@ def decode_token(token: str) -> dict[str, Any]:
 
 
 def encode_token(type: str, uid: int) -> str:
-    expiry = datetime.now()
+    expiry = datetime.now(timezone.utc)
     if type == 'access_token':
         expiry += timedelta(minutes=JWT_ACCESS_TOKEN_EXPIRES_MINUTES)
     elif type == 'refresh_token':
