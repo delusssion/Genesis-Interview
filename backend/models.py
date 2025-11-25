@@ -10,6 +10,7 @@ class UserModel(Base):
 
     uid: Mapped[str] = mapped_column(Integer, primary_key=True)
     nickname: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password: Mapped[str] = mapped_column(String, nullable=False)
 
 

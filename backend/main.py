@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from routes.chat import router as router_chat
 from routes.user import router as router_user
 from routes.tasks import router as router_tasks
+from routes.telemetry import router as router_telemetry
 from config import FRONTEND_ORIGIN
 from database import db
 from models import UserModel, SessionsModel
@@ -32,3 +33,9 @@ app.add_middleware(
 app.include_router(router_user)
 app.include_router(router_chat)
 app.include_router(router_tasks)
+app.include_router(router_telemetry)
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}

@@ -42,8 +42,9 @@ async def auth_get_refresh(
         new_access_token = encode_token("access_token", uid)
         new_refresh_token = encode_token("refresh_token", uid)
 
-        response.set_cookie("access_token", new_access_token)
-        response.set_cookie("refresh_token", new_refresh_token)
+        cookie_params = {"httponly": True, "samesite": "lax"}
+        response.set_cookie("access_token", new_access_token, **cookie_params)
+        response.set_cookie("refresh_token", new_refresh_token, **cookie_params)
 
         return {"success": True}
     else:
@@ -52,17 +53,31 @@ async def auth_get_refresh(
 
 @router.post("/register")
 async def auth_post_register(user_register: UserRegisterSchema, session: sessionDep):
-    query = select(UserModel).where(UserModel.nickname == user_register.nickname)
-    result = await session.execute(query)
+    if user_register.password != user_register.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
 
-    existing_user = result.scalar_one_or_none()
-    if existing_user is not None:
+    existing_nick = await session.execute(
+        select(UserModel).where(UserModel.nickname == user_register.nickname)
+    )
+    if existing_nick.scalar_one_or_none() is not None:
         raise HTTPException(
-            status_code=401, detail="User with such nickname already registered"
+            status_code=409, detail="User with such nickname already registered"
+        )
+
+    existing_email = await session.execute(
+        select(UserModel).where(UserModel.email == user_register.email)
+    )
+    if existing_email.scalar_one_or_none() is not None:
+        raise HTTPException(
+            status_code=409, detail="User with such email already registered"
         )
 
     hashed_password = hasher.hash(user_register.password)
-    user = UserModel(nickname=user_register.nickname, password=hashed_password)
+    user = UserModel(
+        nickname=user_register.nickname,
+        email=user_register.email,
+        password=hashed_password,
+    )
 
     session.add(user)
     await session.commit()
@@ -89,7 +104,8 @@ async def auth_post_login(
     access_token = encode_token("access_token", user.uid)
     refresh_token = encode_token("refresh_token", user.uid)
 
-    response.set_cookie("access_token", access_token)
-    response.set_cookie("refresh_token", refresh_token)
+    cookie_params = {"httponly": True, "samesite": "lax"}
+    response.set_cookie("access_token", access_token, **cookie_params)
+    response.set_cookie("refresh_token", refresh_token, **cookie_params)
 
     return {"success": True}
