@@ -39,8 +39,8 @@ async def auth_get_refresh(
     if payload:
         uid = payload.get("sub")
 
-        new_access_token = encode_token("access", uid)
-        new_refresh_token = encode_token("refresh", uid)
+        new_access_token = encode_token("access_token", uid)
+        new_refresh_token = encode_token("refresh_token", uid)
 
         response.set_cookie("access_token", new_access_token)
         response.set_cookie("refresh_token", new_refresh_token)
