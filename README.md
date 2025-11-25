@@ -3,8 +3,8 @@
 Комплекс для автоматизированных технических интервью на базе Scibox LLM. Репозиторий собирает фронтенд/бек/доки; стартуем с каркаса фронта для чекпоинта №1.
 
 ## Чекпоинт 1 (Frontend)
-- Ветки: `feat/frontend-arch-setup` (влита), `feat/chat-mvp-mock` (влита), `feat/task-pane-state` (влита), `feat/ide-shell-mock` (в работе), `feat/anticheat-hooks-ui` (в работе)
-- React + Vite + TypeScript, UI-шелл (направление/уровень, стейт-машина интервью), конфиг `VITE_API_URL`, моковый чат со стримингом статусов, карточка задачи с видимыми тестами, IDE-заглушка, анти-чит сигналы (моки), переключатель light/dark темы
+- Ветки: `feat/frontend-arch-setup` (влита), `feat/chat-mvp-mock` (влита), `feat/task-pane-state` (влита), `feat/ide-shell-mock` (влита), `feat/anticheat-hooks-ui` (влита)
+- React + Vite + TypeScript, UI-шелл (направление/уровень, стейт-машина интервью), конфиг `VITE_API_URL`, моковый чат со стримингом статусов, карточка задачи с видимыми тестами, IDE-заглушка (run/check), анти-чит сигналы (моки), переключатель light/dark темы
 - Документация чекпоинта: `docs/frontend-checkpoint1.md` (экраны, контракты, стейты)
 
 ## Запуск фронтенда
