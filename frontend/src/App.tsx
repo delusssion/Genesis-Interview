@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 import { AntiCheatPanel } from './components/AntiCheatPanel'
+import { AuthPanel } from './components/AuthPanel'
 import { ChatPanel } from './components/ChatPanel'
 import { IdeShell } from './components/IdeShell'
 import { InterviewStatus } from './components/InterviewStatus'
@@ -23,6 +24,7 @@ function App() {
     <div className="app-shell">
       <ShellHeader theme={theme} onToggleTheme={toggleTheme} />
       <main className="grid">
+        <AuthPanel />
         <TrackSelection />
         <InterviewStatus />
         <ChatPanel />
