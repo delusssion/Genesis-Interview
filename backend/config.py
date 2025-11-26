@@ -14,9 +14,6 @@ BASE_URL = environ.get("BASE_URL")
 if BASE_URL is None:
     raise EnvironmentError("BASE_URL key not found in env")
 
-OPENAI_API_KEY = environ.get("OPENAI_API_KEY")
-if OPENAI_API_KEY is None:
-    raise EnvironmentError("OPENAI_API_KEY not found in env")
 
 
 JWT_SECRET_KEY = environ.get("JWT_SECRET_KEY")

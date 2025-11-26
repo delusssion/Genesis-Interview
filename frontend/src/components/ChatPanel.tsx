@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react'
-import { createChatEventSource, sendMessage, type ChatEvent } from '../shared/api/chat'
+import { connectChatStream, sendMessage, type ChatEvent } from '../shared/api/chat'
 
 const createAssistantMessage = (id: string): ChatMessage => ({
   id,
@@ -34,10 +34,10 @@ export function ChatPanel({ sessionId }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([systemMessage])
   const [draft, setDraft] = useState('')
   const [isSending, setIsSending] = useState(false)
-  const [status, setStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>(
-    'disconnected',
-  )
-  const esRef = useRef<EventSource | null>(null)
+  const [status, setStatus] = useState<
+    'disconnected' | 'connecting' | 'connected' | 'error' | 'closed'
+  >('disconnected')
+  const stopRef = useRef<(() => void) | null>(null)
   const listRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -46,22 +46,21 @@ export function ChatPanel({ sessionId }: Props) {
 
   useEffect(() => {
     if (!sessionId) {
-      esRef.current?.close()
+      stopRef.current?.()
       setStatus('disconnected')
       setMessages([systemMessage])
       return
     }
 
-    setStatus('connecting')
-    const es = createChatEventSource(sessionId, handleEvent)
-    esRef.current = es
-
-    es.onopen = () => setStatus('connected')
-    es.onerror = () => setStatus('error')
-
+    const stop = connectChatStream(
+      sessionId,
+      handleEvent,
+      (next) => setStatus(next === 'closed' ? 'disconnected' : next),
+    )
+    stopRef.current = stop
     return () => {
-      es.close()
-      setStatus('disconnected')
+      stop()
+      setStatus('closed')
     }
   }, [sessionId])
 
@@ -102,6 +101,9 @@ export function ChatPanel({ sessionId }: Props) {
         }
         return next
       })
+    }
+    if (event.type === 'error') {
+      setStatus('error')
     }
   }
 
@@ -180,7 +182,7 @@ export function ChatPanel({ sessionId }: Props) {
 
         <form className="chat-input" onSubmit={handleSend}>
           <div className="chat-hint">
-            Отправь текст — мок ответит частями. Напиши «error» для проверки обработки ошибок.
+            Отправь текст — ИИ ответит частями (SSE). Напиши «error» для проверки обработки ошибок.
           </div>
           <div className="chat-input-row">
             <input

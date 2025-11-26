@@ -10,7 +10,7 @@
 ## Быстрый старт
 ```bash
 cd frontend
-cp .env.example .env   # при необходимости поправьте API URL
+# создайте .env с VITE_API_URL (например http://localhost:8000)
 npm install
 npm run dev
 ```
@@ -20,15 +20,14 @@ npm run dev
 - `npm run build` — сборка
 - `npm run lint` — базовый ESLint
 
-## Что есть в каркасе
+## Что есть
 - Shell с брендингом и индикацией env (`src/components/ShellHeader.tsx`)
-- Выбор направления/уровня с моками (`src/components/TrackSelection.tsx`)
-- Стейт-машина интервью и сигналы анти-чита (моки) (`src/components/InterviewStatus.tsx`)
-- Чат с ИИ (мок стриминга typing → delta → final → error) (`src/components/ChatPanel.tsx`, `src/shared/api/chatMock.ts`)
-- Карточка задачи + видимые тесты + стейт (task_issued → awaiting_solution → evaluating → feedback_ready) (`src/components/TaskPane.tsx`, `src/shared/api/taskMock.ts`)
-- IDE-заглушка: редактор + mock Run/Check (`src/components/IdeShell.tsx`, `src/shared/api/ideMock.ts`)
-- Анти-чит сигналы (моки): copy/paste/blur/focus/devtools (`src/components/AntiCheatPanel.tsx`, `src/shared/api/antiCheatMock.ts`)
+- Выбор направления/уровня (`src/components/TrackSelection.tsx`)
+- Чат с ИИ (SSE) (`src/components/ChatPanel.tsx`, `src/shared/api/chat.ts`)
+- Карточка задачи + видимые тесты + стейт (task_issued → awaiting_solution → evaluating → feedback_ready) (`src/components/TaskPane.tsx`, `src/shared/api/tasks.ts`)
+- IDE: Monaco editor + Run/Check через бэкенд (`src/components/IdeShell.tsx`)
+- Анти-чит сигналы: copy/paste/blur/focus/devtools (`src/components/AntiCheatPanel.tsx`, `src/shared/api/antiCheat.ts`)
 - Общие стили и токены (`src/index.css`, `src/App.css`)
 - Конфиг env (`src/shared/config/env.ts`)
 
-Дальше подключаем реальные эндпоинты, раннер и анти-чит хуки по контракту с беком. Добавлена поддержка light/dark темы (переключатель в шапке).
+Поддержка light/dark темы (переключатель в шапке).

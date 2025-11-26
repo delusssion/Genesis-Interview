@@ -594,6 +594,29 @@
   align-items: center;
 }
 
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.metric-card {
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.feedback-box {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--stroke);
+  background: var(--card);
+}
+
 .auth-tabs {
   display: flex;
   gap: 10px;

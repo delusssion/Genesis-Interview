@@ -1,5 +1,5 @@
 from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 
 
 class ChatMessageSchema(BaseModel):
@@ -12,7 +12,7 @@ class UserLoginSchema(BaseModel):
 
 
 class UserRegisterSchema(UserLoginSchema):
-    email: str = Field(min_length=5)
+    email: EmailStr
     confirm_password: str = Field(min_length=8)
 
 
@@ -20,8 +20,7 @@ class StartInterviewSchema(BaseModel):
     track: Literal["backend", "frontend", "data", "ml"]
     level: Literal["junior", "middle", "senior"]
     preferred_language: Literal["typescript", "python", "go"]
-    user_id: Optional[str] = None
-    locale: Optional[str] = None
+    locale: Optional[str]
 
 
 class TaskRequestSchema(BaseModel):

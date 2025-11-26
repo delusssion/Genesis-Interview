@@ -1,19 +1,32 @@
 type Result = {
-  id: string
+  sessionId: number
   track: string
   level: string
   status: 'passed' | 'failed' | 'in-progress'
-  score: number
-  date: string
+  score?: number | null
+  updatedAt: string
+  feedback?: string
 }
 
-const mockResults: Result[] = [
-  { id: 'INT-031', track: 'Frontend', level: 'Middle', status: 'passed', score: 82, date: '2025-01-22' },
-  { id: 'INT-024', track: 'Backend', level: 'Junior', status: 'in-progress', score: 0, date: '2025-01-18' },
-  { id: 'INT-019', track: 'ML', level: 'Senior', status: 'failed', score: 56, date: '2025-01-12' },
-]
+type Props = {
+  results: Result[]
+}
 
-export function ResultsPanel() {
+export function ResultsPanel({ results }: Props) {
+  const items = results.length
+    ? results
+    : [
+        {
+          sessionId: 0,
+          track: 'Нет сессий',
+          level: '—',
+          status: 'in-progress',
+          score: null,
+          updatedAt: new Date().toISOString(),
+          feedback: 'Запусти интервью, чтобы увидеть историю.',
+        },
+      ]
+
   return (
     <div className="panel">
       <div className="panel-head">
@@ -22,13 +35,15 @@ export function ResultsPanel() {
           <h2>Мои результаты</h2>
           <p className="muted">Фильтры по треку/уровню, последние попытки.</p>
         </div>
-        <div className="pill pill-ghost">Mock data</div>
+        <div className="pill pill-ghost">{results.length ? 'Live' : 'Пока пусто'}</div>
       </div>
       <div className="results-grid">
-        {mockResults.map((res) => (
-          <div key={res.id} className="result-card">
+        {items.map((res) => (
+          <div key={res.sessionId} className="result-card">
             <div className="result-top">
-              <span className="pill pill-ghost">#{res.id}</span>
+              <span className="pill pill-ghost">
+                {res.sessionId ? `#${res.sessionId}` : '—'}
+              </span>
               <span className={`status status-${res.status}`}>
                 {res.status === 'passed'
                   ? 'успех'
@@ -40,10 +55,13 @@ export function ResultsPanel() {
             <div className="result-info">
               <div>{res.track}</div>
               <div className="muted">
-                {res.level} · {res.date}
+                {res.level} · {new Date(res.updatedAt).toLocaleDateString()}
               </div>
             </div>
-            <div className="score">{res.score ? `${res.score} / 100` : '—'}</div>
+            <div className="score">
+              {res.score !== null && res.score !== undefined ? `${res.score} / 100` : '—'}
+            </div>
+            {res.feedback && <p className="muted">{res.feedback}</p>}
           </div>
         ))}
       </div>

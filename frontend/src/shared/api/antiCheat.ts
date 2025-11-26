@@ -24,9 +24,7 @@ const emit = (type: AntiCheatType, meta?: string): AntiCheatSignal => ({
   meta,
 })
 
-export function startAntiCheatMock(
-  onSignal: (signal: AntiCheatSignal) => void,
-): () => void {
+export function startAntiCheat(onSignal: (signal: AntiCheatSignal) => void): () => void {
   const handleCopy = () => onSignal(emit('copy'))
   const handlePaste = () => onSignal(emit('paste'))
   const handleBlur = () => onSignal(emit('blur'))
@@ -67,6 +65,6 @@ export function startAntiCheatMock(
   }
 }
 
-export function triggerDevtoolsMock(onSignal: (signal: AntiCheatSignal) => void) {
+export function triggerDevtools(onSignal: (signal: AntiCheatSignal) => void) {
   onSignal(emit('devtools', 'manual-trigger'))
 }

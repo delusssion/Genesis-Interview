@@ -8,14 +8,14 @@ import json
 
 from schemas import ChatMessageSchema, StartInterviewSchema
 from models import SessionsModel
-from config import BASE_URL, OPENAI_API_KEY
+from config import BASE_URL
 from prompts import INTERVIEWER_PROMPT, INTERVIEWER_STAGE_PROMPTS
 from dependencies import verify_access_token, sessionDep
 
 
 router = APIRouter(tags=["Chat"])
 
-client = OpenAI(base_url=BASE_URL, api_key=OPENAI_API_KEY)
+client = OpenAI(base_url=BASE_URL)
 
 
 @router.post("/interview/start")
@@ -75,7 +75,10 @@ async def chat_stream(
 
     history = parse_history(ses.history)
     last_user_message = (
-        next((msg["content"] for msg in reversed(history) if msg.get("role") == "user"), None)
+        next(
+            (msg["content"] for msg in reversed(history) if msg.get("role") == "user"),
+            None,
+        )
         or "привет"
     )
     llm_msg = json.dumps(
@@ -97,7 +100,10 @@ async def chat_stream(
                 model="qwen3-32b-awq",
                 messages=[
                     {"role": "system", "content": INTERVIEWER_PROMPT},
-                    {"role": "system", "content": INTERVIEWER_STAGE_PROMPTS.get(ses.state, "")},
+                    {
+                        "role": "system",
+                        "content": INTERVIEWER_STAGE_PROMPTS.get(ses.state, ""),
+                    },
                     {"role": "user", "content": llm_msg},
                 ],
                 stream=True,
@@ -125,7 +131,19 @@ async def chat_stream(
                     yield "event: heartbeat\ndata: {}\n\n"
                     last_heartbeat = now
 
-            event = json.dumps({"final": final_text}, ensure_ascii=False)
+            final_text = final_text.lstrip("<think>\n\n</think>\n\n")
+            final_json = json.loads(final_text)
+
+            if ses.state != final_json["next_state"]:
+                query = (
+                    update(SessionsModel)
+                    .where(SessionsModel.session_id == ses.session_id)
+                    .values(state=final_json["next_state"])
+                )
+                await session.execute(query)
+                await session.commit()
+
+            event = json.dumps({"final": final_json["message"]}, ensure_ascii=False)
             # Event: final
             yield f"event: final\ndata: {event}\n\n"
 
@@ -167,7 +185,9 @@ async def chat_send(
 
         ses_history = ses.history or []
         ses_history.append(
-            json.dumps({"role": "user", "content": chat_message.message}, ensure_ascii=False)
+            json.dumps(
+                {"role": "user", "content": chat_message.message}, ensure_ascii=False
+            )
         )
 
         query = (
