@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useRef, useState } from 'react'
+import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { connectChatStream, sendMessage, type ChatEvent } from '../shared/api/chat'
 
 const createAssistantMessage = (id: string): ChatMessage => ({
@@ -39,35 +39,20 @@ export function ChatPanel({ sessionId }: Props) {
   >('disconnected')
   const stopRef = useRef<(() => void) | null>(null)
   const listRef = useRef<HTMLDivElement | null>(null)
+  const sessionRef = useRef<number | null>(null)
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages])
 
-  useEffect(() => {
-    if (!sessionId) {
-      stopRef.current?.()
-      setStatus('disconnected')
-      setMessages([systemMessage])
-      return
-    }
-
-    const stop = connectChatStream(
-      sessionId,
-      handleEvent,
-      (next) => setStatus(next === 'closed' ? 'disconnected' : next),
-    )
-    stopRef.current = stop
-    return () => {
-      stop()
-      setStatus('closed')
-    }
-  }, [sessionId])
-
-  const handleEvent = (event: ChatEvent) => {
+  const handleEvent = useCallback((event: ChatEvent) => {
     if (event.type === 'heartbeat') return
     if (event.type === 'typing') {
-      setMessages((prev) => [...prev, createAssistantMessage(`asst-${Date.now()}`)])
+      setMessages((prev) => {
+        const hasStreaming = prev.some((msg) => msg.status === 'streaming')
+        if (hasStreaming) return prev
+        return [...prev, createAssistantMessage(`asst-${Date.now()}`)]
+      })
       return
     }
     if (event.type === 'delta' || event.type === 'final' || event.type === 'error') {
@@ -104,8 +89,40 @@ export function ChatPanel({ sessionId }: Props) {
     }
     if (event.type === 'error') {
       setStatus('error')
+      stopRef.current?.()
     }
-  }
+  }, [])
+
+  const startStream = useCallback(() => {
+    if (!sessionRef.current) return
+    stopRef.current?.()
+    const stop = connectChatStream(
+      sessionRef.current,
+      handleEvent,
+      (next) => setStatus(next === 'closed' ? 'disconnected' : next),
+      { autoReconnect: false },
+    )
+    stopRef.current = stop
+  }, [handleEvent])
+
+  useEffect(() => {
+    sessionRef.current = sessionId
+    if (!sessionId) {
+      stopRef.current?.()
+      setStatus('disconnected')
+      setMessages([systemMessage])
+      setIsSending(false)
+      return
+    }
+
+    setIsSending(true)
+    startStream()
+
+    return () => {
+      stopRef.current?.()
+      setStatus('closed')
+    }
+  }, [sessionId, startStream])
 
   const handleSend = async (evt: FormEvent) => {
     evt.preventDefault()
@@ -120,12 +137,13 @@ export function ChatPanel({ sessionId }: Props) {
       status: 'final',
     }
 
-    setMessages((prev) => [...prev, userMessage, createAssistantMessage(`asst-${Date.now()}`)])
+    setMessages((prev) => [...prev, userMessage])
     setDraft('')
     setIsSending(true)
 
     try {
       await sendMessage({ session_id: sessionId, message: text })
+      startStream()
     } catch (e) {
       setIsSending(false)
       setMessages((prev) => [

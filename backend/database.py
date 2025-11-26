@@ -16,7 +16,7 @@ class Database:
         self.engine = create_async_engine(url=url_database)
         self.session = async_sessionmaker(bind=self.engine, expire_on_commit=False)
 
-    async def get_session(self) -> AsyncGenerator[AsyncSession]:
+    async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
         async with self.session() as ses:
             yield ses
 
