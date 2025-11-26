@@ -19,10 +19,9 @@ type ChatMessage = {
 
 type Props = {
   sessionId: number | null
-  onFinish?: () => void
 }
 
-export function ChatPanel({ sessionId, onFinish }: Props) {
+export function ChatPanel({ sessionId }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [draft, setDraft] = useState('')
   const [isSending, setIsSending] = useState(false)
@@ -38,11 +37,11 @@ export function ChatPanel({ sessionId, onFinish }: Props) {
   }, [messages])
 
   const handleEvent = useCallback((event: ChatEvent) => {
-    const extractMessage = (text: string | undefined) => {
+    const extractMessage = (text?: string) => {
       if (!text) return ''
       let cleaned = text
-      cleaned = cleaned.replace(/<think>[\\s\\S]*?<\\/think>/g, '')
-      const fenced = cleaned.match(/```json\\s*([\\s\\S]*?)```/i)
+      cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/gi, '')
+      const fenced = cleaned.match(/```json\s*([\s\S]*?)```/i)
       if (fenced?.[1]) {
         try {
           const parsed = JSON.parse(fenced[1])
@@ -58,8 +57,7 @@ export function ChatPanel({ sessionId, onFinish }: Props) {
       } catch (_) {
         /* ignore */
       }
-      cleaned = cleaned.replace(/```[a-zA-Z]*|```/g, '')
-      return cleaned.trim()
+      return cleaned.replace(/```[a-zA-Z]*|```/g, '').trim()
     }
 
     if (event.type === 'heartbeat') return
@@ -187,23 +185,30 @@ export function ChatPanel({ sessionId, onFinish }: Props) {
   }
 
   return (
-    <div className="panel grid-full chat-fullscreen">
-      <div className="chat-header">
-        <div className="chat-brand">Genesis Interview</div>
-        <div className="chat-actions">
-          <button className="ghost-btn danger" type="button" onClick={onFinish}>
-            Завершить интервью
-          </button>
+    <div className="panel grid-full">
+      <div className="panel-head">
+        <div>
+          <p className="eyebrow">Шаг 3 · чат с ИИ</p>
+          <h2>Чат Scibox (SSE)</h2>
+          <p className="muted">Сессия нужна для подключения к /chat/stream и /chat/send.</p>
         </div>
+        <div className="pill pill-ghost">Статус: {status}</div>
       </div>
 
       <div className="chat-shell">
-        <div className="chat-messages big" ref={listRef}>
+        <div className="chat-messages" ref={listRef}>
           {messages.map((msg) => (
             <div key={msg.id} className={`bubble bubble-${msg.role}`}>
               <div className="bubble-meta">
-                <span className="pill pill-ghost">{msg.role === 'assistant' ? 'Интервьюер' : 'Вы'}</span>
+                <span className="pill pill-ghost">{msg.role === 'assistant' ? 'ИИ' : 'Вы'}</span>
                 <span className="muted">{new Date(msg.createdAt).toLocaleTimeString()}</span>
+                <span className={`status status-${msg.status}`}>
+                  {msg.status === 'streaming'
+                    ? 'typing'
+                    : msg.status === 'final'
+                      ? 'final'
+                      : 'error'}
+                </span>
               </div>
               <p>{msg.content}</p>
             </div>
@@ -211,11 +216,14 @@ export function ChatPanel({ sessionId, onFinish }: Props) {
         </div>
 
         <form className="chat-input" onSubmit={handleSend}>
-          <div className="chat-input-row big">
+          <div className="chat-hint">
+            Отправь текст — ИИ ответит частями (SSE). Напиши «error» для проверки обработки ошибок.
+          </div>
+          <div className="chat-input-row">
             <input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder="Напишите ответ или задайте вопрос..."
+              placeholder="Опиши стек или спроси интервьюера..."
               disabled={isSending}
             />
             <button className="cta" type="submit" disabled={!draft.trim() || isSending}>
