@@ -48,7 +48,9 @@ export function AuthPanel({ onAuthSuccess, onRedirectHome, onNotify }: Props) {
       }
     } catch (e) {
       setStatus('error')
-      setMessage((e as Error).message)
+      const errMsg = (e as Error).message
+      setMessage(errMsg)
+      onNotify?.(errMsg)
     }
   }
 
