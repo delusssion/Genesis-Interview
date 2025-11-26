@@ -119,10 +119,15 @@ Genesis-Interview/
 - Если порты заняты — поменяйте их в docker-compose.yml.
 - Ошибки CORS — настройте FRONTEND_ORIGIN в backend/.env.
 - Для полной очистки:
-   ```bash
-   docker-compose down -v
-   docker system prune -a
-   ```
+  ```bash
+  docker-compose down -v
+  docker system prune -a
+  ```
+- Полный ресет и чистый старт (если образы/контейнеры сломались):
+  ```bash
+  docker-compose down -v --remove-orphans && docker image prune -a
+  docker-compose up --build -d
+  ```
 
 <<<<<<< HEAD
 ---
