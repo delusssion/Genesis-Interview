@@ -16,7 +16,21 @@ function App() {
   const [isStarting, setIsStarting] = useState(false)
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null)
   const [selectedLevel, setSelectedLevel] = useState<'junior' | 'middle' | 'senior'>('junior')
+  const [selectedTrack, setSelectedTrack] = useState<'frontend' | 'backend' | 'data' | 'ml'>(
+    'frontend',
+  )
   const [selectedLanguage, setSelectedLanguage] = useState('typescript')
+  const [results, setResults] = useState<
+    {
+      sessionId: number
+      track: string
+      level: string
+      status: 'in-progress' | 'passed' | 'failed'
+      score?: number | null
+      feedback?: string
+      updatedAt: string
+    }[]
+  >([])
 
   useEffect(() => {
     document.body.setAttribute('data-theme', theme)
@@ -33,6 +47,7 @@ function App() {
   }) => {
     setIsStarting(true)
     setSelectedLevel(opts.level)
+    setSelectedTrack(opts.track)
     setSelectedLanguage(opts.language)
     try {
       const res = await startInterview({
@@ -42,9 +57,25 @@ function App() {
         user_id: 'frontend-user',
         locale: 'ru',
       })
-      if (res.success && res.session_id) {
-        setSessionId(res.session_id)
+      if (res.success && typeof res.session_id === 'number') {
+        const sessionId = res.session_id
+        setSessionId(sessionId)
         setCurrentTaskId(null)
+        const now = new Date().toISOString()
+        setResults((prev) =>
+          [
+            {
+              sessionId,
+              track: opts.track,
+              level: opts.level,
+              status: 'in-progress' as const,
+              score: null,
+              feedback: '',
+              updatedAt: now,
+            },
+            ...prev.filter((r) => r.sessionId !== res.session_id),
+          ].slice(0, 6),
+        )
       } else {
         alert('Не удалось создать сессию')
       }
@@ -53,6 +84,42 @@ function App() {
     } finally {
       setIsStarting(false)
     }
+  }
+
+  const handleProgressUpdate = (data: {
+    sessionId: number
+    state: string
+    quality?: number | null
+    testsPassed?: number | null
+    testsTotal?: number | null
+    feedback?: string
+  }) => {
+    setResults((prev) => {
+      const existing = prev.find((r) => r.sessionId === data.sessionId)
+      const status: 'in-progress' | 'passed' | 'failed' =
+        data.state === 'feedback_ready'
+          ? data.quality && data.quality >= 80 && data.testsPassed !== 0
+            ? 'passed'
+            : 'failed'
+          : 'in-progress'
+      const score =
+        typeof data.quality === 'number'
+          ? data.quality
+          : data.testsPassed && data.testsTotal
+            ? Math.round((data.testsPassed / data.testsTotal) * 100)
+            : existing?.score ?? null
+      const merged = {
+        sessionId: data.sessionId,
+        track: existing?.track ?? selectedTrack,
+        level: existing?.level ?? selectedLevel,
+        status,
+        score,
+        feedback: data.feedback ?? existing?.feedback,
+        updatedAt: new Date().toISOString(),
+      }
+      const rest = prev.filter((r) => r.sessionId !== data.sessionId)
+      return [merged, ...rest].slice(0, 6)
+    })
   }
 
   return (
@@ -67,7 +134,9 @@ function App() {
         </div>
         <div className="overview-card">
           <p className="eyebrow">Настройки интервью</p>
-          <h3>{selectedLevel.toUpperCase()} · {selectedLanguage}</h3>
+          <h3>
+            {selectedTrack.toUpperCase()} · {selectedLevel.toUpperCase()} · {selectedLanguage}
+          </h3>
           <p className="muted">Выбери направление, чтобы начать новую сессию.</p>
         </div>
         <div className="overview-card">
@@ -81,7 +150,7 @@ function App() {
         <div className="column column-left">
           <AuthPanel />
           <TrackSelection onStart={handleStart} isStarting={isStarting} />
-          <ResultsPanel />
+          <ResultsPanel results={results} />
         </div>
         <div className="column column-right">
           <div className="workspace">
@@ -91,6 +160,7 @@ function App() {
               level={selectedLevel}
               language={selectedLanguage}
               onTaskChange={(taskId) => setCurrentTaskId(taskId)}
+              onProgress={handleProgressUpdate}
             />
             <IdeShell sessionId={sessionId} taskId={currentTaskId} language={selectedLanguage} />
             <AntiCheatPanel sessionId={sessionId} />

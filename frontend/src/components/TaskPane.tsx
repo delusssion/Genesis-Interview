@@ -14,9 +14,23 @@ type Props = {
   level: 'junior' | 'middle' | 'senior'
   language?: string
   onTaskChange: (taskId: string | null) => void
+  onProgress?: (data: {
+    sessionId: number
+    state: string
+    quality?: number | null
+    testsPassed?: number | null
+    testsTotal?: number | null
+    feedback?: string
+  }) => void
 }
 
-export function TaskPane({ sessionId, level, language = 'typescript', onTaskChange }: Props) {
+export function TaskPane({
+  sessionId,
+  level,
+  language = 'typescript',
+  onTaskChange,
+  onProgress,
+}: Props) {
   const [task, setTask] = useState<TaskResponse['task'] | null>(null)
   const [state, setState] = useState<string>('idle')
   const [tests, setTests] = useState<VisibleTest[]>([])
@@ -49,6 +63,13 @@ export function TaskPane({ sessionId, level, language = 'typescript', onTaskChan
         setQuality(null)
         setFeedback('')
         onTaskChange(res.task.task_id)
+        if (sessionId) {
+          onProgress?.({
+            sessionId,
+            state: res.state || 'task_issued',
+            testsTotal: res.task.visible_tests?.length ?? null,
+          })
+        }
       } else {
         setMessage('Не удалось получить задачу')
       }
@@ -81,6 +102,18 @@ export function TaskPane({ sessionId, level, language = 'typescript', onTaskChan
       setQuality(res.success ? 80 : 60)
       setFeedback(res.success ? 'Видимые тесты пройдены' : res.details || 'Ошибки на видимых тестах')
       setMessage(res.success ? 'Видимые тесты пройдены' : 'Тесты на видимых примерах не прошли')
+      if (sessionId) {
+        onProgress?.({
+          sessionId,
+          state: 'awaiting_solution',
+          quality: res.success ? 80 : 60,
+          testsPassed: passed,
+          testsTotal: total,
+          feedback: res.success
+            ? 'Видимые тесты пройдены'
+            : res.details || 'Ошибки на видимых тестах',
+        })
+      }
     } catch (e) {
       setMessage((e as Error).message)
     }
@@ -105,6 +138,16 @@ export function TaskPane({ sessionId, level, language = 'typescript', onTaskChan
       setQuality(res.success ? 95 : 50)
       setFeedback(res.details || (res.success ? 'Скрытые тесты пройдены' : 'Ошибки в скрытых тестах'))
       setMessage(res.success ? 'Скрытые тесты пройдены' : res.details || 'Ошибки в скрытых тестах')
+      if (sessionId) {
+        onProgress?.({
+          sessionId,
+          state: res.state || 'feedback_ready',
+          quality: res.success ? 95 : 50,
+          testsPassed,
+          testsTotal,
+          feedback: res.details || (res.success ? 'Скрытые тесты пройдены' : 'Ошибки в скрытых тестах'),
+        })
+      }
     } catch (e) {
       setMessage((e as Error).message)
     }
