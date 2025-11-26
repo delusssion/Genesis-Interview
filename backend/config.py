@@ -32,3 +32,9 @@ JWT_REFRESH_TOKEN_EXPIRES_DAYS = 14
 URL_DATABASE = environ.get('URL_DATABASE')
 if URL_DATABASE is None:
     raise EnvironmentError("URL_DATABASE not found in env")
+
+
+# Scibox configuration (optional)
+SCIBOX_API_KEY = environ.get("SCIBOX_API_KEY", "")
+# Base URL for Scibox LLM API (no trailing path)
+SCIBOX_BASE_URL = environ.get("SCIBOX_BASE_URL", "https://llm.t1v.scibox.tech")
