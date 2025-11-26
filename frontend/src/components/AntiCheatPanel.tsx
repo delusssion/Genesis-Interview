@@ -36,6 +36,7 @@ export function AntiCheatPanel({ sessionId }: Props) {
   const [buffer, setBuffer] = useState<AntiCheatSignal[]>([])
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
+  const [lastSentAt, setLastSentAt] = useState<string | null>(null)
 
   const addSignal = (sig: AntiCheatSignal) => {
     setSignals((prev) => [sig, ...prev].slice(0, 12))
@@ -51,13 +52,17 @@ export function AntiCheatPanel({ sessionId }: Props) {
 
   useEffect(() => {
     if (!sessionId || buffer.length === 0 || sending) return
-    const controller = new AbortController()
+    const payload = [...buffer]
     const flush = async () => {
       try {
         setSending(true)
         setSendError(null)
-        await sendAnticheat(sessionId, buffer.map((b) => ({ type: b.type, at: b.at, meta: b.meta })))
-        setBuffer([])
+        await sendAnticheat(
+          sessionId,
+          payload.map((b) => ({ type: b.type, at: b.at, meta: b.meta })),
+        )
+        setBuffer((prev) => prev.slice(payload.length))
+        setLastSentAt(new Date().toISOString())
       } catch (e) {
         console.error('Telemetry send failed', e)
         setSendError((e as Error).message)
@@ -65,9 +70,27 @@ export function AntiCheatPanel({ sessionId }: Props) {
         setSending(false)
       }
     }
-    flush()
-    return () => controller.abort()
+    const timer = setTimeout(flush, 1200)
+    return () => clearTimeout(timer)
   }, [buffer, sessionId, sending])
+
+  const flushNow = async () => {
+    if (!sessionId || buffer.length === 0 || sending) return
+    try {
+      setSending(true)
+      await sendAnticheat(
+        sessionId,
+        buffer.map((b) => ({ type: b.type, at: b.at, meta: b.meta })),
+      )
+      setBuffer([])
+      setLastSentAt(new Date().toISOString())
+      setSendError(null)
+    } catch (e) {
+      setSendError((e as Error).message)
+    } finally {
+      setSending(false)
+    }
+  }
 
   const counts = useMemo(() => {
     return signals.reduce<Record<AntiCheatType, number>>(
@@ -99,7 +122,11 @@ export function AntiCheatPanel({ sessionId }: Props) {
           </p>
         </div>
         <div className="pill pill-ghost">
-          {sending ? 'Отправляем...' : sendError ? 'Ошибка телеметрии' : 'Сбор сигналов'}
+          {sending
+            ? 'Отправляем...'
+            : sendError
+              ? 'Ошибка телеметрии'
+              : `Буфер: ${buffer.length}`}
         </div>
       </div>
 
@@ -113,6 +140,9 @@ export function AntiCheatPanel({ sessionId }: Props) {
         </button>
         <button className="ghost-btn" type="button" onClick={() => setSignals([])}>
           Очистить лог
+        </button>
+        <button className="ghost-btn" type="button" onClick={flushNow} disabled={sending || !buffer.length || !sessionId}>
+          Отправить сейчас
         </button>
       </div>
 
@@ -138,6 +168,11 @@ export function AntiCheatPanel({ sessionId }: Props) {
           ))
         )}
       </div>
+      {lastSentAt && (
+        <p className="muted">
+          Отправлено: {new Date(lastSentAt).toLocaleTimeString()} · накоплено: {buffer.length}
+        </p>
+      )}
       {sendError && <p className="muted">Не удалось отправить: {sendError}</p>}
     </div>
   )
