@@ -102,10 +102,12 @@ async def auth_post_login(user_login: UserLoginSchema, response: Response, sessi
 
     user = result.scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=401, detail="User with such identifier doesnt exist")
+        raise HTTPException(
+            status_code=401, detail="Пользователь с таким ником или email не найден"
+        )
 
     if not hasher.verify(user_login.password, user.password):
-        raise HTTPException(status_code=401, detail="Wrong password")
+        raise HTTPException(status_code=401, detail="Неверный пароль")
 
     access_token = encode_token("access_token", user.uid)
     refresh_token = encode_token("refresh_token", user.uid)
