@@ -223,7 +223,9 @@ export function ChatPanel({ sessionId, onFinish }: Props) {
                 <span className="pill pill-ghost">{msg.role === 'assistant' ? 'Интервьюер' : 'Вы'}</span>
                 <span className="muted">{new Date(msg.createdAt).toLocaleTimeString()}</span>
               </div>
-              <p>{msg.content}</p>
+              <p>
+                {msg.status === 'streaming' && !msg.content ? <span className="typing-dots">...</span> : msg.content}
+              </p>
             </div>
           ))}
         </div>

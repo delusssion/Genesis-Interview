@@ -789,6 +789,9 @@ body[data-theme='dark'] .brand-title {
   padding: 14px;
   background: #ffffff;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .runner-output pre {
@@ -800,6 +803,13 @@ body[data-theme='dark'] .brand-title {
   min-height: 160px;
   margin: 0;
   border: 1px dashed #e2e8f0;
+}
+
+.visible-tests-card {
+  border: 1px solid #e4e7ef;
+  border-radius: 12px;
+  padding: 12px;
+  background: #f8fafc;
 }
 
 .chat-shell {
@@ -891,6 +901,13 @@ body[data-theme='dark'] .brand-title {
   gap: 8px;
   margin-bottom: 8px;
   font-size: 13px;
+}
+
+.typing-dots {
+  display: inline-flex;
+  gap: 2px;
+  letter-spacing: 2px;
+  color: var(--muted);
 }
 
 .chat-input {
