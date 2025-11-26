@@ -14,9 +14,12 @@ BASE_URL = environ.get("BASE_URL")
 if BASE_URL is None:
     raise EnvironmentError("BASE_URL key not found in env")
 
+<<<<<<< HEAD
 OPENAI_API_KEY = environ.get("OPENAI_API_KEY")
 if OPENAI_API_KEY is None:
     raise EnvironmentError("OPENAI_API_KEY not found in env")
+=======
+>>>>>>> feature-api
 
 
 JWT_SECRET_KEY = environ.get("JWT_SECRET_KEY")
@@ -34,4 +37,8 @@ JWT_REFRESH_TOKEN_EXPIRES_DAYS = 14
 
 URL_DATABASE = environ.get('URL_DATABASE')
 if URL_DATABASE is None:
+<<<<<<< HEAD
     raise EnvironmentError("URL_DATABASE not found in env")
+=======
+    raise EnvironmentError("URL_DATABASE not found in env")
+>>>>>>> feature-api
