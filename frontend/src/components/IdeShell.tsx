@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Editor from '@monaco-editor/react'
 import { checkCode, runCode } from '../shared/api/tasks'
 
@@ -47,22 +47,81 @@ type Props = {
   sessionId: number | null
   taskId: string | null
   language?: string
+  onProgress?: (data: {
+    sessionId: number
+    state: string
+    quality?: number | null
+    testsPassed?: number | null
+    testsTotal?: number | null
+    feedback?: string
+  }) => void
+  onCodeChange?: (code: string) => void
 }
 
-export function IdeShell({ sessionId, taskId, language: initialLang = 'typescript' }: Props) {
+type RunResult = {
+  type: 'run' | 'check'
+  success: boolean
+  results?: { test: number; passed: boolean }[]
+  details?: string | null
+  stderr?: string | null
+  hiddenFailed?: boolean
+  timeout?: boolean
+  limitExceeded?: boolean
+}
+
+export function IdeShell({
+  sessionId,
+  taskId,
+  language: initialLang = 'typescript',
+  onProgress,
+  onCodeChange,
+}: Props) {
   const [language, setLanguage] = useState<Language>(initialLang as Language)
   const [code, setCode] = useState(defaultCode['typescript'])
   const [output, setOutput] = useState<string>('Готов к запуску.')
   const [status, setStatus] = useState<'idle' | 'running' | 'checking'>('idle')
   const [duration, setDuration] = useState<number | null>(null)
+  const [runResult, setRunResult] = useState<RunResult | null>(null)
+
+  const storageKey = useMemo(() => `ide-draft-${language}`, [language])
 
   useEffect(() => {
     setLanguage(initialLang as Language)
   }, [initialLang])
 
   useEffect(() => {
-    setCode(defaultCode[language])
-  }, [language])
+    const saved = localStorage.getItem(storageKey)
+    setCode(saved || defaultCode[language])
+  }, [language, storageKey])
+
+  useEffect(() => {
+    onCodeChange?.(code)
+  }, [code, onCodeChange])
+
+  const saveDraft = (next: string) => {
+    setCode(next)
+    onCodeChange?.(next)
+    localStorage.setItem(storageKey, next)
+  }
+
+  const pushProgress = (data: Partial<RunResult> & { state: string }) => {
+    if (!sessionId) return
+    const testsPassed =
+      data.results?.filter((r) => r.passed).length ??
+      (data.hiddenFailed === false ? data.results?.length ?? null : null)
+    const testsTotal = data.results?.length ?? null
+    const quality = data.success ? (data.type === 'check' ? 95 : 80) : 50
+    onProgress?.({
+      sessionId,
+      state: data.state,
+      quality,
+      testsPassed,
+      testsTotal,
+      feedback:
+        data.details ||
+        (data.success ? 'Тесты пройдены' : data.stderr || 'Есть ошибки, проверь вывод'),
+    })
+  }
 
   const handleRun = async () => {
     if (!sessionId || !taskId) {
@@ -80,7 +139,21 @@ export function IdeShell({ sessionId, taskId, language: initialLang = 'typescrip
         code,
       })
       setDuration(res.time_ms || null)
-      setOutput(res.results ? JSON.stringify(res.results) : res.success ? 'ok' : 'Ошибка запуска')
+      setRunResult({
+        type: 'run',
+        success: res.success,
+        results: res.results,
+        details: res.details,
+        stderr: res.details,
+      })
+      setOutput(res.results ? JSON.stringify(res.results, null, 2) : res.success ? 'ok' : 'Ошибка запуска')
+      pushProgress({
+        type: 'run',
+        success: res.success,
+        results: res.results,
+        details: res.details,
+        state: res.state || 'awaiting_solution',
+      })
     } catch (e) {
       setOutput((e as Error).message)
     } finally {
@@ -104,7 +177,24 @@ export function IdeShell({ sessionId, taskId, language: initialLang = 'typescrip
         code,
       })
       setDuration(res.time_ms || null)
+      setRunResult({
+        type: 'check',
+        success: res.success,
+        details: res.details,
+        hiddenFailed: res.hidden_failed,
+        timeout: res.timeout,
+        limitExceeded: res.limit_exceeded,
+      })
       setOutput(res.details || (res.success ? 'Скрытые тесты пройдены' : 'Ошибки в скрытых тестах'))
+      pushProgress({
+        type: 'check',
+        success: res.success,
+        details: res.details,
+        hiddenFailed: res.hidden_failed,
+        timeout: res.timeout,
+        limitExceeded: res.limit_exceeded,
+        state: res.state || 'feedback_ready',
+      })
     } catch (e) {
       setOutput((e as Error).message)
     } finally {
@@ -160,7 +250,7 @@ export function IdeShell({ sessionId, taskId, language: initialLang = 'typescrip
             height="260px"
             language={language === 'typescript' ? 'typescript' : language}
             value={code}
-            onChange={(value) => setCode(value || '')}
+            onChange={(value) => saveDraft(value || '')}
             options={{ minimap: { enabled: false }, readOnly: status !== 'idle', fontSize: 14 }}
           />
         </div>
@@ -171,6 +261,37 @@ export function IdeShell({ sessionId, taskId, language: initialLang = 'typescrip
               {duration !== null && <p className="muted">Время: {duration} мс</p>}
             </div>
           </div>
+          {runResult && (
+            <div className="tests-grid">
+              {runResult.results?.map((res) => (
+                <div key={res.test} className="test-card">
+                  <div className="test-top">
+                    <span className="pill pill-ghost">Тест {res.test}</span>
+                    <span className={`status ${res.passed ? 'status-passed' : 'status-failed'}`}>
+                      {res.passed ? 'ok' : 'fail'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {runResult.type === 'check' && runResult.hiddenFailed !== undefined && (
+                <div className="test-card">
+                  <div className="test-top">
+                    <span className="pill pill-ghost">Скрытые</span>
+                    <span
+                      className={`status ${
+                        runResult.hiddenFailed ? 'status-failed' : 'status-passed'
+                      }`}
+                    >
+                      {runResult.hiddenFailed ? 'fail' : 'ok'}
+                    </span>
+                  </div>
+                  {runResult.limitExceeded && <p className="muted">Лимит ресурсов</p>}
+                  {runResult.timeout && <p className="muted">Таймаут</p>}
+                </div>
+              )}
+            </div>
+          )}
+          {runResult?.stderr && <p className="muted">stderr: {runResult.stderr}</p>}
           <pre>{output}</pre>
         </div>
       </div>

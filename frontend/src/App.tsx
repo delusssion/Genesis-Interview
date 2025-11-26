@@ -156,17 +156,22 @@ function App() {
           <div className="workspace">
             <ChatPanel sessionId={sessionId} />
             <TaskPane
-              sessionId={sessionId}
-              level={selectedLevel}
-              language={selectedLanguage}
-              onTaskChange={(taskId) => setCurrentTaskId(taskId)}
-              onProgress={handleProgressUpdate}
-            />
-            <IdeShell sessionId={sessionId} taskId={currentTaskId} language={selectedLanguage} />
-            <AntiCheatPanel sessionId={sessionId} />
-          </div>
+            sessionId={sessionId}
+            level={selectedLevel}
+            language={selectedLanguage}
+            onTaskChange={(taskId) => setCurrentTaskId(taskId)}
+            onProgress={handleProgressUpdate}
+          />
+          <IdeShell
+            sessionId={sessionId}
+            taskId={currentTaskId}
+            language={selectedLanguage}
+            onProgress={handleProgressUpdate}
+          />
+          <AntiCheatPanel sessionId={sessionId} />
         </div>
-      </main>
+      </div>
+    </main>
     </div>
   )
 }
