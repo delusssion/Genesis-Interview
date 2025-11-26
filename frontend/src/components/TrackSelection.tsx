@@ -24,7 +24,7 @@ const tracks: Track[] = [
     status: 'todo',
   },
   {
-    id: 'ml-llm',
+    id: 'ml',
     title: 'LLM/Prompts',
     stack: 'Scibox LLM · state machine · safety',
     focus: 'Генерация задач, оценка решений, фолбэки',
@@ -41,9 +41,10 @@ type Props = {
     language: 'typescript' | 'python' | 'go'
   }) => void
   isStarting: boolean
+  disabled?: boolean
 }
 
-export function TrackSelection({ onStart, isStarting }: Props) {
+export function TrackSelection({ onStart, isStarting, disabled }: Props) {
   const [selectedTrack, setSelectedTrack] = useState<'frontend' | 'backend' | 'data' | 'ml'>('frontend')
   const [selectedLevel, setSelectedLevel] = useState<'junior' | 'middle' | 'senior'>('junior')
   const [language, setLanguage] = useState<'typescript' | 'python' | 'go'>('typescript')
@@ -62,7 +63,7 @@ export function TrackSelection({ onStart, isStarting }: Props) {
         <button
           className="cta"
           type="button"
-          disabled={isStarting}
+          disabled={isStarting || disabled}
           onClick={() => onStart({ track: selectedTrack, level: selectedLevel, language })}
         >
           {isStarting ? 'Запуск...' : 'Начать интервью'}

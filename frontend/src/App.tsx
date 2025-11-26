@@ -20,17 +20,20 @@ function App() {
     'frontend',
   )
   const [selectedLanguage, setSelectedLanguage] = useState('typescript')
-  const [results, setResults] = useState<
-    {
-      sessionId: number
-      track: string
-      level: string
-      status: 'in-progress' | 'passed' | 'failed'
-      score?: number | null
-      feedback?: string
-      updatedAt: string
-    }[]
-  >([])
+
+const [isAuthenticated, setIsAuthenticated] = useState(false)
+const [isInterviewMode, setIsInterviewMode] = useState(false)
+const [results, setResults] = useState<
+  {
+    sessionId: number
+    track: string
+    level: string
+    status: 'in-progress' | 'passed' | 'failed'
+    score?: number | null
+    feedback?: string
+    updatedAt: string
+  }[]
+>([])
 
   useEffect(() => {
     document.body.setAttribute('data-theme', theme)
@@ -45,6 +48,10 @@ function App() {
     level: 'junior' | 'middle' | 'senior'
     language: 'typescript' | 'python' | 'go'
   }) => {
+    if (!isAuthenticated) {
+      alert('Сначала войди или зарегистрируйся')
+      return
+    }
     setIsStarting(true)
     setSelectedLevel(opts.level)
     setSelectedTrack(opts.track)
@@ -61,6 +68,7 @@ function App() {
         const sessionId = res.session_id
         setSessionId(sessionId)
         setCurrentTaskId(null)
+        setIsInterviewMode(true)
         const now = new Date().toISOString()
         setResults((prev) =>
           [
@@ -73,7 +81,7 @@ function App() {
               feedback: '',
               updatedAt: now,
             },
-            ...prev.filter((r) => r.sessionId !== res.session_id),
+            ...prev.filter((r) => r.sessionId !== sessionId),
           ].slice(0, 6),
         )
       } else {
@@ -85,6 +93,12 @@ function App() {
       setIsStarting(false)
     }
   }
+
+  useEffect(() => {
+    if (isInterviewMode) {
+      document.getElementById('interview-workspace')?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [isInterviewMode])
 
   const handleProgressUpdate = (data: {
     sessionId: number
@@ -134,10 +148,10 @@ function App() {
         </div>
         <div className="overview-card">
           <p className="eyebrow">Настройки интервью</p>
-          <h3>
-            {selectedTrack.toUpperCase()} · {selectedLevel.toUpperCase()} · {selectedLanguage}
-          </h3>
-          <p className="muted">Выбери направление, чтобы начать новую сессию.</p>
+          <h3>{selectedTrack.toUpperCase()} · {selectedLevel.toUpperCase()} · {selectedLanguage}</h3>
+          <p className="muted">
+            {isAuthenticated ? 'Выбери направление и стартуй' : 'Сначала авторизация'}
+          </p>
         </div>
         <div className="overview-card">
           <p className="eyebrow">Тема</p>
@@ -148,30 +162,35 @@ function App() {
 
       <main className="layout">
         <div className="column column-left">
-          <AuthPanel />
-          <TrackSelection onStart={handleStart} isStarting={isStarting} />
+          <AuthPanel onAuthSuccess={() => setIsAuthenticated(true)} />
+          <TrackSelection
+            onStart={handleStart}
+            isStarting={isStarting}
+            disabled={!isAuthenticated}
+          />
           <ResultsPanel results={results} />
         </div>
         <div className="column column-right">
-          <div className="workspace">
+          <div className="workspace" id="interview-workspace">
             <ChatPanel sessionId={sessionId} />
             <TaskPane
-            sessionId={sessionId}
-            level={selectedLevel}
-            language={selectedLanguage}
-            onTaskChange={(taskId) => setCurrentTaskId(taskId)}
-            onProgress={handleProgressUpdate}
-          />
-          <IdeShell
-            sessionId={sessionId}
-            taskId={currentTaskId}
-            language={selectedLanguage}
-            onProgress={handleProgressUpdate}
-          />
-          <AntiCheatPanel sessionId={sessionId} />
+              sessionId={sessionId}
+              level={selectedLevel}
+              language={selectedLanguage}
+              onTaskChange={(taskId) => setCurrentTaskId(taskId)}
+              onProgress={handleProgressUpdate}
+            />
+            <IdeShell
+              sessionId={sessionId}
+              taskId={currentTaskId}
+              language={selectedLanguage}
+              onProgress={handleProgressUpdate}
+            />
+            <AntiCheatPanel sessionId={sessionId} />
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+
     </div>
   )
 }

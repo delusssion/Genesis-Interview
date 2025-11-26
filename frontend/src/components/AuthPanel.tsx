@@ -10,7 +10,11 @@ const initialState = {
   confirmPassword: '',
 }
 
-export function AuthPanel() {
+type Props = {
+  onAuthSuccess?: () => void
+}
+
+export function AuthPanel({ onAuthSuccess }: Props) {
   const [mode, setMode] = useState<AuthMode>('login')
   const [form, setForm] = useState(initialState)
   const [status, setStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
@@ -26,10 +30,12 @@ export function AuthPanel() {
         await login(form.nickname, form.password)
         setStatus('ok')
         setMessage('Успешный вход')
+        onAuthSuccess?.()
       } else {
         await register(form.email, form.nickname, form.password)
         setStatus('ok')
         setMessage('Успешная регистрация')
+        onAuthSuccess?.()
       }
     } catch (e) {
       setStatus('error')
