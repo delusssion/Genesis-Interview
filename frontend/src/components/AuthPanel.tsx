@@ -1,5 +1,7 @@
 import { type FormEvent, useState } from 'react'
-import { authMock, type AuthMode } from '../shared/api/authMock'
+import { login, register } from '../shared/api/auth'
+
+type AuthMode = 'login' | 'register'
 
 const initialState = {
   email: '',
@@ -8,7 +10,11 @@ const initialState = {
   confirmPassword: '',
 }
 
-export function AuthPanel() {
+type Props = {
+  onAuthSuccess?: () => void
+}
+
+export function AuthPanel({ onAuthSuccess }: Props) {
   const [mode, setMode] = useState<AuthMode>('login')
   const [form, setForm] = useState(initialState)
   const [status, setStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
@@ -19,19 +25,21 @@ export function AuthPanel() {
     setStatus('loading')
     setMessage('')
 
-    const resp = await authMock(mode, {
-      email: form.email,
-      nickname: form.nickname,
-      password: form.password,
-      confirmPassword: form.confirmPassword,
-    })
-
-    if (resp.success) {
-      setStatus('ok')
-      setMessage(`Успех. Токен: ${resp.token}`)
-    } else {
+    try {
+      if (mode === 'login') {
+        await login(form.nickname, form.password)
+        setStatus('ok')
+        setMessage('Успешный вход')
+        onAuthSuccess?.()
+      } else {
+        await register(form.email, form.nickname, form.password)
+        setStatus('ok')
+        setMessage('Успешная регистрация')
+        onAuthSuccess?.()
+      }
+    } catch (e) {
       setStatus('error')
-      setMessage(resp.error)
+      setMessage((e as Error).message)
     }
   }
 

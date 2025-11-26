@@ -1,5 +1,5 @@
 .app-shell {
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 32px 28px 80px;
   display: flex;
@@ -7,10 +7,37 @@
   gap: 28px;
 }
 
-.grid {
+.layout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-  gap: 18px;
+  grid-template-columns: 360px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.column-right .workspace {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.overview-card {
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  padding: 16px;
+  background: var(--glass);
+  box-shadow: var(--shadow);
 }
 
 .panel {
@@ -65,6 +92,20 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+}
+
+.nav-link {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--stroke);
 }
 
 .pill {
@@ -136,6 +177,11 @@
   border-radius: 12px;
   background: var(--card);
   font-weight: 600;
+}
+.level-pill.selected,
+.track-card.selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
 }
 
 .tracks-grid {
@@ -548,6 +594,29 @@
   align-items: center;
 }
 
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.metric-card {
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.feedback-box {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--stroke);
+  background: var(--card);
+}
+
 .auth-tabs {
   display: flex;
   gap: 10px;
@@ -593,6 +662,37 @@
   color: #b91c1c;
 }
 
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.result-card {
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--card);
+  display: grid;
+  gap: 6px;
+}
+
+.result-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.result-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.score {
+  font-weight: 700;
+}
+
 @media (max-width: 720px) {
   .shell-header {
     flex-direction: column;
@@ -602,5 +702,9 @@
   .panel-head {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
   }
 }

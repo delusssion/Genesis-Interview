@@ -1,108 +1,152 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react'
-import {
-  type ChatMessage,
-  type ChatEvent,
-  type ChatStream,
-  createAssistantMessage,
-  generateMessageId,
-  mockChatStream,
-} from '../shared/api/chatMock'
+import { connectChatStream, sendMessage, type ChatEvent } from '../shared/api/chat'
 
-const initialMessages: ChatMessage[] = [
-  {
-    id: generateMessageId('sys'),
-    role: 'assistant',
-    content:
-      'Привет! Я ИИ-интервьюер. Расскажи, по какому стеку хочешь интервью и какой у тебя уровень.',
-    createdAt: new Date().toISOString(),
-    status: 'final',
-  },
-]
+const createAssistantMessage = (id: string): ChatMessage => ({
+  id,
+  role: 'assistant',
+  content: '',
+  createdAt: new Date().toISOString(),
+  status: 'streaming',
+})
 
-export function ChatPanel() {
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
+type ChatMessage = {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  createdAt: string
+  status: 'streaming' | 'final' | 'error'
+}
+
+type Props = {
+  sessionId: number | null
+}
+
+const systemMessage: ChatMessage = {
+  id: 'sys',
+  role: 'assistant',
+  content:
+    'Привет! Я ИИ-интервьюер. После старта сессии отправь первое сообщение или нажми "Начать".',
+  createdAt: new Date().toISOString(),
+  status: 'final',
+}
+
+export function ChatPanel({ sessionId }: Props) {
+  const [messages, setMessages] = useState<ChatMessage[]>([systemMessage])
   const [draft, setDraft] = useState('')
   const [isSending, setIsSending] = useState(false)
-  const streamRef = useRef<ChatStream | null>(null)
+  const [status, setStatus] = useState<
+    'disconnected' | 'connecting' | 'connected' | 'error' | 'closed'
+  >('disconnected')
+  const stopRef = useRef<(() => void) | null>(null)
   const listRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    return () => {
-      streamRef.current?.cancel()
-    }
-  }, [])
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages])
 
+  useEffect(() => {
+    if (!sessionId) {
+      stopRef.current?.()
+      setStatus('disconnected')
+      setMessages([systemMessage])
+      return
+    }
+
+    const stop = connectChatStream(
+      sessionId,
+      handleEvent,
+      (next) => setStatus(next === 'closed' ? 'disconnected' : next),
+    )
+    stopRef.current = stop
+    return () => {
+      stop()
+      setStatus('closed')
+    }
+  }, [sessionId])
+
   const handleEvent = (event: ChatEvent) => {
-    setMessages((prev) => {
-      const next = [...prev]
-      const idx = next.findIndex((msg) => msg.id === event.messageId)
+    if (event.type === 'heartbeat') return
+    if (event.type === 'typing') {
+      setMessages((prev) => [...prev, createAssistantMessage(`asst-${Date.now()}`)])
+      return
+    }
+    if (event.type === 'delta' || event.type === 'final' || event.type === 'error') {
+      setMessages((prev) => {
+        const next = [...prev]
+        const idx = next.findIndex((msg) => msg.status === 'streaming')
+        const targetIndex = idx !== -1 ? idx : next.length - 1
+        if (targetIndex < 0) return next
 
-      if (event.type === 'typing' && idx === -1) {
-        next.push(createAssistantMessage(event.messageId))
+        const current = next[targetIndex]
+        if (event.type === 'delta') {
+          next[targetIndex] = {
+            ...current,
+            status: 'streaming',
+            content: current.content ? `${current.content}${event.delta}` : event.delta,
+          }
+        } else if (event.type === 'final') {
+          next[targetIndex] = {
+            ...current,
+            status: 'final',
+            content: event.final,
+          }
+          setIsSending(false)
+        } else {
+          next[targetIndex] = {
+            ...current,
+            status: 'error',
+            content: event.error,
+          }
+          setIsSending(false)
+        }
         return next
-      }
-
-      if (idx === -1) {
-        return next
-      }
-
-      const current = next[idx]
-
-      if (event.type === 'delta') {
-        next[idx] = {
-          ...current,
-          status: 'streaming',
-          content: current.content
-            ? `${current.content} ${event.content}`.replace(/\s+/g, ' ').trim()
-            : event.content,
-        }
-      } else if (event.type === 'final') {
-        next[idx] = {
-          ...current,
-          status: 'final',
-          content: current.content || event.content,
-        }
-      } else if (event.type === 'error') {
-        next[idx] = {
-          ...current,
-          status: 'error',
-          content: current.content || event.error,
-        }
-      }
-
-      return next
-    })
-
-    if (event.type === 'final' || event.type === 'error') {
-      setIsSending(false)
+      })
+    }
+    if (event.type === 'error') {
+      setStatus('error')
     }
   }
 
-  const handleSend = (evt: FormEvent) => {
+  const handleSend = async (evt: FormEvent) => {
     evt.preventDefault()
     const text = draft.trim()
-    if (!text || isSending) return
+    if (!text || isSending || !sessionId) return
 
     const userMessage: ChatMessage = {
-      id: generateMessageId('user'),
+      id: `user-${Date.now()}`,
       role: 'user',
       content: text,
       createdAt: new Date().toISOString(),
       status: 'final',
     }
 
-    const assistantId = generateMessageId('asst')
-
-    setMessages((prev) => [...prev, userMessage, createAssistantMessage(assistantId)])
+    setMessages((prev) => [...prev, userMessage, createAssistantMessage(`asst-${Date.now()}`)])
     setDraft('')
     setIsSending(true)
 
-    streamRef.current?.cancel()
-    streamRef.current = mockChatStream(text, handleEvent, { messageId: assistantId })
+    try {
+      await sendMessage({ session_id: sessionId, message: text })
+    } catch (e) {
+      setIsSending(false)
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `err-${Date.now()}`,
+          role: 'assistant',
+          content: (e as Error).message,
+          createdAt: new Date().toISOString(),
+          status: 'error',
+        },
+      ])
+    }
+  }
+
+  if (!sessionId) {
+    return (
+      <div className="panel grid-full">
+        <p className="muted">Сначала запусти интервью, чтобы подключить чат.</p>
+      </div>
+    )
   }
 
   return (
@@ -110,13 +154,10 @@ export function ChatPanel() {
       <div className="panel-head">
         <div>
           <p className="eyebrow">Шаг 3 · чат с ИИ</p>
-          <h2>Моковый чат Scibox (SSE-like)</h2>
-          <p className="muted">
-            Имитируем потоковые ответы: typing → delta → final → error. На API переключимся
-            через VITE_API_URL, сохраняя формат событий.
-          </p>
+          <h2>Чат Scibox (SSE)</h2>
+          <p className="muted">Сессия нужна для подключения к /chat/stream и /chat/send.</p>
         </div>
-        <div className="pill pill-ghost">Статус: mock</div>
+        <div className="pill pill-ghost">Статус: {status}</div>
       </div>
 
       <div className="chat-shell">
@@ -141,7 +182,7 @@ export function ChatPanel() {
 
         <form className="chat-input" onSubmit={handleSend}>
           <div className="chat-hint">
-            Отправь текст — мок ответит частями. Напиши «error» для проверки обработки ошибок.
+            Отправь текст — ИИ ответит частями (SSE). Напиши «error» для проверки обработки ошибок.
           </div>
           <div className="chat-input-row">
             <input

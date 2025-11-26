@@ -19,6 +19,7 @@ npm run dev
 - Каркас UI: `frontend/src/App.tsx`
 - Env конфиг: `frontend/src/shared/config/env.ts`
 - Базовые стили/токены: `frontend/src/index.css`, `frontend/src/App.css`
+<<<<<<< HEAD
 - Чат + моковый стриминг: `frontend/src/components/ChatPanel.tsx`, `frontend/src/shared/api/chatMock.ts`
 - Карточка задачи + тесты (моки): `frontend/src/components/TaskPane.tsx`, `frontend/src/shared/api/taskMock.ts`
 - IDE заглушка: `frontend/src/components/IdeShell.tsx`, `frontend/src/shared/api/ideMock.ts`
@@ -28,6 +29,12 @@ npm run dev
 Дальше добавляем боевой раннер, анти-чит телеметрию и подключение реальных API/SSE.
 =======
 Дальше добавляем раннер интеграцию, анти-чит хуки и подключение реальных API/SSE.
+=======
+- Чат + SSE: `frontend/src/components/ChatPanel.tsx`, `frontend/src/shared/api/chat.ts`
+- Карточка задачи + тесты: `frontend/src/components/TaskPane.tsx`, `frontend/src/shared/api/tasks.ts`
+- IDE: `frontend/src/components/IdeShell.tsx`
+- Анти-чит сигналы: `frontend/src/components/AntiCheatPanel.tsx`, `frontend/src/shared/api/antiCheat.ts`
+>>>>>>> 733880c4df49cabb106ab7b61324ba576f814964
 
 
 
@@ -117,4 +124,11 @@ Genesis-Interview/
    docker system prune -a
    ```
 
+<<<<<<< HEAD
 ---
+=======
+---
+=======
+Дальше добавляем боевой раннер, анти-чит телеметрию и подключение реальных API/SSE.
+
+>>>>>>> 733880c4df49cabb106ab7b61324ba576f814964
