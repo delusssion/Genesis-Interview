@@ -19,19 +19,11 @@ type ChatMessage = {
 
 type Props = {
   sessionId: number | null
+  onFinish?: () => void
 }
 
-const systemMessage: ChatMessage = {
-  id: 'sys',
-  role: 'assistant',
-  content:
-    'Привет! Я ИИ-интервьюер. После старта сессии отправь первое сообщение или нажми "Начать".',
-  createdAt: new Date().toISOString(),
-  status: 'final',
-}
-
-export function ChatPanel({ sessionId }: Props) {
-  const [messages, setMessages] = useState<ChatMessage[]>([systemMessage])
+export function ChatPanel({ sessionId, onFinish }: Props) {
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [draft, setDraft] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [status, setStatus] = useState<
@@ -46,6 +38,30 @@ export function ChatPanel({ sessionId }: Props) {
   }, [messages])
 
   const handleEvent = useCallback((event: ChatEvent) => {
+    const extractMessage = (text: string | undefined) => {
+      if (!text) return ''
+      let cleaned = text
+      cleaned = cleaned.replace(/<think>[\\s\\S]*?<\\/think>/g, '')
+      const fenced = cleaned.match(/```json\\s*([\\s\\S]*?)```/i)
+      if (fenced?.[1]) {
+        try {
+          const parsed = JSON.parse(fenced[1])
+          if (parsed?.message) return String(parsed.message)
+        } catch (_) {
+          /* ignore */
+        }
+        return fenced[1].trim()
+      }
+      try {
+        const parsed = JSON.parse(cleaned)
+        if (parsed?.message) return String(parsed.message)
+      } catch (_) {
+        /* ignore */
+      }
+      cleaned = cleaned.replace(/```[a-zA-Z]*|```/g, '')
+      return cleaned.trim()
+    }
+
     if (event.type === 'heartbeat') return
     if (event.type === 'typing') {
       setMessages((prev) => {
@@ -64,16 +80,19 @@ export function ChatPanel({ sessionId }: Props) {
 
         const current = next[targetIndex]
         if (event.type === 'delta') {
+          const deltaClean = extractMessage(event.delta)
+          if (!deltaClean) return next
           next[targetIndex] = {
             ...current,
             status: 'streaming',
-            content: current.content ? `${current.content}${event.delta}` : event.delta,
+            content: current.content ? `${current.content}${deltaClean}` : deltaClean,
           }
         } else if (event.type === 'final') {
+          const finalClean = extractMessage(event.final)
           next[targetIndex] = {
             ...current,
             status: 'final',
-            content: event.final,
+            content: finalClean || event.final,
           }
           setIsSending(false)
         } else {
@@ -110,7 +129,7 @@ export function ChatPanel({ sessionId }: Props) {
     if (!sessionId) {
       stopRef.current?.()
       setStatus('disconnected')
-      setMessages([systemMessage])
+      setMessages([])
       setIsSending(false)
       return
     }
@@ -168,30 +187,23 @@ export function ChatPanel({ sessionId }: Props) {
   }
 
   return (
-    <div className="panel grid-full">
-      <div className="panel-head">
-        <div>
-          <p className="eyebrow">Шаг 3 · чат с ИИ</p>
-          <h2>Чат Scibox (SSE)</h2>
-          <p className="muted">Сессия нужна для подключения к /chat/stream и /chat/send.</p>
+    <div className="panel grid-full chat-fullscreen">
+      <div className="chat-header">
+        <div className="chat-brand">Genesis Interview</div>
+        <div className="chat-actions">
+          <button className="ghost-btn danger" type="button" onClick={onFinish}>
+            Завершить интервью
+          </button>
         </div>
-        <div className="pill pill-ghost">Статус: {status}</div>
       </div>
 
       <div className="chat-shell">
-        <div className="chat-messages" ref={listRef}>
+        <div className="chat-messages big" ref={listRef}>
           {messages.map((msg) => (
             <div key={msg.id} className={`bubble bubble-${msg.role}`}>
               <div className="bubble-meta">
-                <span className="pill pill-ghost">{msg.role === 'assistant' ? 'ИИ' : 'Вы'}</span>
+                <span className="pill pill-ghost">{msg.role === 'assistant' ? 'Интервьюер' : 'Вы'}</span>
                 <span className="muted">{new Date(msg.createdAt).toLocaleTimeString()}</span>
-                <span className={`status status-${msg.status}`}>
-                  {msg.status === 'streaming'
-                    ? 'typing'
-                    : msg.status === 'final'
-                      ? 'final'
-                      : 'error'}
-                </span>
               </div>
               <p>{msg.content}</p>
             </div>
@@ -199,14 +211,11 @@ export function ChatPanel({ sessionId }: Props) {
         </div>
 
         <form className="chat-input" onSubmit={handleSend}>
-          <div className="chat-hint">
-            Отправь текст — ИИ ответит частями (SSE). Напиши «error» для проверки обработки ошибок.
-          </div>
-          <div className="chat-input-row">
+          <div className="chat-input-row big">
             <input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder="Опиши стек или спроси интервьюера..."
+              placeholder="Напишите ответ или задайте вопрос..."
               disabled={isSending}
             />
             <button className="cta" type="submit" disabled={!draft.trim() || isSending}>

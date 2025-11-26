@@ -88,7 +88,8 @@ async def chat_stream(
         f"уровень {ses.level}, "
         f"язык/стек {ses.preferred_language}, "
         f"длительность {ses.duration_minutes} минут. "
-        "Сохраняй формат JSON с полями message и next_state."
+        "Сохраняй формат JSON с полями message и next_state. "
+        "Отвечай кратко, без служебных тегов."
     )
 
     # Build messages with system prompts + history

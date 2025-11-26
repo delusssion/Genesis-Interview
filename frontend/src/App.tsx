@@ -501,36 +501,28 @@ function App() {
 
   const renderInterview = () => (
     <main className="layout">
-      <div className="workspace" id="interview-workspace">
-        <div className="panel panel-compact">
+      <div className="workspace chat-only" id="interview-workspace">
+        <ChatPanel
+          sessionId={sessionId}
+          onFinish={() => {
+            setShowFinishModal(true)
+          }}
+        />
+
+        <div className="panel code-runner">
           <div className="panel-head">
             <div>
-              <p className="eyebrow">Сессия</p>
-              <h3>Интервью #{sessionId}</h3>
+              <p className="eyebrow">Раннер</p>
+              <h3>Пишите и гоняйте код по запросу интервьюера</h3>
             </div>
-            <button className="ghost-btn danger" type="button" onClick={() => setShowFinishModal(true)}>
-              Закончить интервью
-            </button>
           </div>
+          <IdeShell
+            sessionId={sessionId}
+            taskId={currentTaskId}
+            language={(selectedLanguage ?? 'typescript') as 'typescript' | 'python' | 'go'}
+            onProgress={handleProgressUpdate}
+          />
         </div>
-        <ChatPanel sessionId={sessionId} />
-        {currentTaskId && (
-          <>
-            <TaskPane
-              sessionId={sessionId}
-              level={selectedLevel}
-              language={selectedLanguage ?? undefined}
-              onTaskChange={(taskId) => setCurrentTaskId(taskId)}
-              onProgress={handleProgressUpdate}
-            />
-            <IdeShell
-              sessionId={sessionId}
-              taskId={currentTaskId}
-              language={(selectedLanguage ?? 'typescript') as 'typescript' | 'python' | 'go'}
-              onProgress={handleProgressUpdate}
-            />
-          </>
-        )}
       </div>
     </main>
   )
