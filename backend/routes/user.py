@@ -27,6 +27,14 @@ async def auth_get_me(access_token=Depends(get_access_token)):
         return {"success": False, "detail": "Token is invalid or expired"}
 
 
+@router.post("/logout")
+async def auth_post_logout(response: Response):
+    cookie_params = {"httponly": True, "samesite": "lax"}
+    response.delete_cookie("access_token", **cookie_params)
+    response.delete_cookie("refresh_token", **cookie_params)
+    return {"success": True}
+
+
 @router.get("/refresh")
 async def auth_get_refresh(
     response: Response, refresh_token=Depends(get_refresh_token)

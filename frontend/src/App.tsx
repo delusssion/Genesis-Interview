@@ -6,6 +6,7 @@ import { IdeShell } from './components/IdeShell'
 import { ResultsPanel } from './components/ResultsPanel'
 import { ShellHeader } from './components/ShellHeader'
 import { TaskPane } from './components/TaskPane'
+import { logout as logoutApi, me, refresh } from './shared/api/auth'
 import { startInterview } from './shared/api/interview'
 
 type View = 'home' | 'auth' | 'results' | 'interview'
@@ -40,6 +41,38 @@ function App() {
   useEffect(() => {
     document.body.setAttribute('data-theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    let cancelled = false
+    const hydrateAuth = async () => {
+      try {
+        const meResp = await me()
+        if (meResp.success) {
+          if (!cancelled) setIsAuthenticated(true)
+          return
+        }
+      } catch (_) {
+        /* silent */
+      }
+
+      try {
+        const refreshed = await refresh()
+        if (refreshed.success) {
+          const meResp = await me()
+          if (!cancelled) setIsAuthenticated(meResp.success)
+        } else if (!cancelled) {
+          setIsAuthenticated(false)
+        }
+      } catch (_) {
+        if (!cancelled) setIsAuthenticated(false)
+      }
+    }
+
+    hydrateAuth()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))
@@ -266,6 +299,18 @@ function App() {
         onToggleTheme={toggleTheme}
         onShowAuth={() => setView('auth')}
         onShowResults={() => setView('results')}
+        isAuthenticated={isAuthenticated}
+        onLogout={async () => {
+          try {
+            await logoutApi()
+          } catch (_) {
+            /* silent */
+          }
+          setIsAuthenticated(false)
+          setSessionId(null)
+          setCurrentTaskId(null)
+          setView('home')
+        }}
       />
 
       {view === 'home' && renderHome()}

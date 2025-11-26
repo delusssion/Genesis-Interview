@@ -21,6 +21,8 @@ export function AuthPanel({ onAuthSuccess, onRedirectHome, onNotify }: Props) {
   const [form, setForm] = useState(initialState)
   const [status, setStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
   const [message, setMessage] = useState<string>('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   const onSubmit = async (evt: FormEvent) => {
     evt.preventDefault()
@@ -107,26 +109,48 @@ export function AuthPanel({ onAuthSuccess, onRedirectHome, onNotify }: Props) {
         </label>
         <label className="field">
           <span>Пароль</span>
-          <input
-            type="password"
-            value={form.password}
-            onChange={(e) => update('password', e.target.value)}
-            placeholder="Не менее 8 символов"
-            minLength={8}
-            required
-          />
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={form.password}
+              onChange={(e) => update('password', e.target.value)}
+              placeholder="Не менее 8 символов"
+              minLength={8}
+              required
+              style={{ flex: 1 }}
+            />
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={() => setShowPassword((prev) => !prev)}
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              {showPassword ? 'Скрыть' : 'Показать'}
+            </button>
+          </div>
         </label>
         {mode === 'register' && (
           <label className="field">
             <span>Подтверждение</span>
-            <input
-              type="password"
-              value={form.confirmPassword}
-              onChange={(e) => update('confirmPassword', e.target.value)}
-              placeholder="Повторите пароль"
-              minLength={8}
-              required
-            />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type={showConfirm ? 'text' : 'password'}
+                value={form.confirmPassword}
+                onChange={(e) => update('confirmPassword', e.target.value)}
+                placeholder="Повторите пароль"
+                minLength={8}
+                required
+                style={{ flex: 1 }}
+              />
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={() => setShowConfirm((prev) => !prev)}
+                style={{ whiteSpace: 'nowrap' }}
+              >
+                {showConfirm ? 'Скрыть' : 'Показать'}
+              </button>
+            </div>
           </label>
         )}
 

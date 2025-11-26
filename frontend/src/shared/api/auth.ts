@@ -14,3 +14,15 @@ export async function register(email: string, nickname: string, password: string
     confirm_password: password,
   })
 }
+
+export async function me() {
+  return api.get<AuthResponse>('/auth/me')
+}
+
+export async function refresh() {
+  return api.get<AuthResponse>('/auth/refresh')
+}
+
+export async function logout() {
+  return api.post<AuthResponse>('/auth/logout')
+}
