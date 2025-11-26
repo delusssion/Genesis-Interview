@@ -10,7 +10,7 @@ import json
 
 from schemas import ChatMessageSchema, StartInterviewSchema
 from models import SessionsModel
-from config import BASE_URL, SCIBOX_API_KEY, SCIBOX_BASE_URL
+from config import SCIBOX_API_KEY, SCIBOX_BASE_URL
 from prompts import INTERVIEWER_PROMPT, INTERVIEWER_STAGE_PROMPTS
 from dependencies import verify_access_token, sessionDep
 
@@ -18,6 +18,7 @@ from dependencies import verify_access_token, sessionDep
 router = APIRouter(tags=["Chat"])
 
 ## Удалён клиент OpenAI, используется только Scibox
+SCIBOX_CHAT_URL = f"{SCIBOX_BASE_URL.rstrip('/')}/v1/chat/completions"
 
 
 @router.post("/interview/start")
@@ -50,6 +51,119 @@ async def interview_start(
 
 
 ## Удалён старый SSE-чат на OpenAI, остался только Scibox и обычные endpoints
+
+
+def _parse_history(raw_history: list[str]) -> list[dict]:
+    parsed = []
+    for item in raw_history or []:
+        try:
+            parsed.append(json.loads(item))
+        except Exception:
+            parsed.append({"role": "user", "content": item})
+    return parsed
+
+
+@router.get("/chat/stream")
+async def chat_stream(
+    session_id: int,
+    request: Request,
+    session: sessionDep,
+    is_token_valid=Depends(verify_access_token),
+):
+    if not is_token_valid:
+        raise HTTPException(
+            status_code=401, detail="Access token not found or invalid or expired"
+        )
+
+    ses = await session.get(SessionsModel, session_id)
+    if ses is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    history = _parse_history(ses.history)
+
+    # Build messages with system prompts + history
+    messages = [
+        {"role": "system", "content": INTERVIEWER_PROMPT},
+        {
+            "role": "system",
+            "content": INTERVIEWER_STAGE_PROMPTS.get(ses.state or "idle", ""),
+        },
+    ]
+    for msg in history:
+        role = msg.get("role") or "user"
+        content = msg.get("content") or ""
+        messages.append({"role": role, "content": content})
+
+    async def event_generator():
+        # typing event
+        yield "event: typing\ndata: {}\n\n"
+
+        headers = {
+            "Authorization": f"Bearer {SCIBOX_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": "qwen3-32b-awq",
+            "messages": messages,
+            "stream": True,
+            "max_tokens": 600,
+            "temperature": 0.7,
+        }
+
+        final_text = ""
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                async with client.stream(
+                    "POST",
+                    SCIBOX_CHAT_URL,
+                    headers=headers,
+                    json=payload,
+                ) as resp:
+                    if resp.status_code != 200:
+                        detail = await resp.aread()
+                        raise HTTPException(
+                            status_code=resp.status_code,
+                            detail=f"Scibox error: {detail}",
+                        )
+
+                    async for raw_line in resp.aiter_lines():
+                        if await request.is_disconnected():
+                            break
+                        if not raw_line or not raw_line.startswith("data:"):
+                            continue
+                        data = raw_line.removeprefix("data:").strip()
+                        if data == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(data)
+                            delta = chunk["choices"][0]["delta"].get("content")
+                        except Exception:
+                            delta = None
+                        if delta:
+                            final_text += delta
+                            payload_delta = json.dumps({"delta": delta}, ensure_ascii=False)
+                            yield f"event: delta\ndata: {payload_delta}\n\n"
+
+        except HTTPException as e:
+            error_payload = json.dumps({"error": str(e.detail)}, ensure_ascii=False)
+            yield f"event: error\ndata: {error_payload}\n\n"
+            return
+        except Exception as e:
+            error_payload = json.dumps({"error": str(e)}, ensure_ascii=False)
+            yield f"event: error\ndata: {error_payload}\n\n"
+            return
+
+        final_event = json.dumps({"final": final_text}, ensure_ascii=False)
+        yield f"event: final\ndata: {final_event}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 @router.post("/chat/send")

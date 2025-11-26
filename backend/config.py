@@ -4,17 +4,9 @@ from os import environ
 
 load_dotenv()
 
-
 FRONTEND_ORIGIN = environ.get("FRONTEND_ORIGIN")
 if FRONTEND_ORIGIN is None:
     raise EnvironmentError("FRONTEND_ORIGIN key not found in env")
-
-
-BASE_URL = environ.get("BASE_URL")
-if BASE_URL is None:
-    raise EnvironmentError("BASE_URL key not found in env")
-
-
 
 JWT_SECRET_KEY = environ.get("JWT_SECRET_KEY")
 if JWT_SECRET_KEY is None:
@@ -27,12 +19,9 @@ if JWT_ALGORITHM is None:
 JWT_ACCESS_TOKEN_EXPIRES_MINUTES = 30
 JWT_REFRESH_TOKEN_EXPIRES_DAYS = 14
 
-
-
-URL_DATABASE = environ.get('URL_DATABASE')
+URL_DATABASE = environ.get("URL_DATABASE")
 if URL_DATABASE is None:
     raise EnvironmentError("URL_DATABASE not found in env")
-
 
 # Scibox configuration (optional)
 SCIBOX_API_KEY = environ.get("SCIBOX_API_KEY", "")
