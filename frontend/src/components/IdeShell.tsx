@@ -323,38 +323,46 @@ export function IdeShell({ sessionId, taskId, language: initialLang = 'typescrip
               {duration !== null && <p className="muted">Время: {duration} мс</p>}
             </div>
           </div>
-          {runResult && (
-            <div className="tests-grid">
-              {runResult.results?.map((res) => (
-                <div key={res.test} className="test-card">
-                  <div className="test-top">
-                    <span className="pill pill-ghost">Тест {res.test}</span>
-                    <span className={`status ${res.passed ? 'status-passed' : 'status-failed'}`}>
-                      {res.passed ? 'ok' : 'fail'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {runResult.type === 'check' && runResult.hiddenFailed !== undefined && (
-                <div className="test-card">
-                  <div className="test-top">
-                    <span className="pill pill-ghost">Скрытые</span>
-                    <span
-                      className={`status ${
-                        runResult.hiddenFailed ? 'status-failed' : 'status-passed'
-                      }`}
-                    >
-                      {runResult.hiddenFailed ? 'fail' : 'ok'}
-                    </span>
-                  </div>
-                  {runResult.limitExceeded && <p className="muted">Лимит ресурсов</p>}
-                  {runResult.timeout && <p className="muted">Таймаут</p>}
-                </div>
-              )}
-            </div>
-          )}
           {runResult?.stderr && <p className="muted">stderr: {runResult.stderr}</p>}
           <pre>{output}</pre>
+          {runResult && (
+            <div className="visible-tests-card">
+              <div className="panel-head">
+                <div>
+                  <p className="eyebrow">Видимые тесты</p>
+                  <p className="muted">Результаты последних прогонов</p>
+                </div>
+              </div>
+              <div className="tests-grid">
+                {runResult.results?.map((res) => (
+                  <div key={res.test} className="test-card">
+                    <div className="test-top">
+                      <span className="pill pill-ghost">Тест {res.test}</span>
+                      <span className={`status ${res.passed ? 'status-passed' : 'status-failed'}`}>
+                        {res.passed ? '✓' : '✕'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {runResult.type === 'check' && runResult.hiddenFailed !== undefined && (
+                  <div className="test-card">
+                    <div className="test-top">
+                      <span className="pill pill-ghost">Скрытые</span>
+                      <span
+                        className={`status ${
+                          runResult.hiddenFailed ? 'status-failed' : 'status-passed'
+                        }`}
+                      >
+                        {runResult.hiddenFailed ? '✕' : '✓'}
+                      </span>
+                    </div>
+                    {runResult.limitExceeded && <p className="muted">Лимит ресурсов</p>}
+                    {runResult.timeout && <p className="muted">Таймаут</p>}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
