@@ -1,9 +1,15 @@
 import { api } from './client'
 
-type AuthResponse = { success: true } | { success: false; detail?: string }
+export type AuthResponse =
+  | { success: true; access_token?: string; refresh_token?: string }
+  | { success: false; detail?: string }
 
 export async function login(identifier: string, password: string) {
-  return api.post<AuthResponse>('/auth/login', { identifier, password })
+  const res = await api.post<AuthResponse>('/auth/login', { identifier, password })
+  if (res.success && res.access_token) {
+    localStorage.setItem('access_token', res.access_token)
+  }
+  return res
 }
 
 export async function register(email: string, nickname: string, password: string) {
