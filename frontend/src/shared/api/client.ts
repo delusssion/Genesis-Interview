@@ -27,11 +27,22 @@ async function request<T>(
   let lastError: unknown
   for (let attempt = 0; attempt <= DEFAULT_RETRIES; attempt++) {
     try {
+      // Получаем токен из localStorage (или другого хранилища)
+      let token = ''
+      try {
+        token = localStorage.getItem('access_token') || ''
+      } catch {}
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
       const res = await fetch(`${env.apiUrl}${path}`, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         credentials: 'include',
         body: body ? JSON.stringify(body) : undefined,
       })

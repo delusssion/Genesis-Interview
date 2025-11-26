@@ -50,17 +50,32 @@ npm run dev
    cd Genesis-Interview
    ```
 
-2. **Создайте файлы окружения:**
+
+2. **Создайте файлы окружения и настройте значения для Docker:**
    ```bash
-   cp .env.example .env
    cp backend/.env.example backend/.env
-   cp frontend/.env.example frontend/.env
+   cp frontend/.env frontend/.env # если нет .env.example, просто скопируйте .env
+   ```
+
+   **backend/.env (пример для Docker):**
+   ```
+   BASE_URL=https://llm.t1v.scibox.tech/v1
+   OPENAI_API_KEY=sk-udaICyx6pCknu7cpZFZNFA
+   FRONTEND_ORIGIN=http://localhost:3000
+   URL_DATABASE=sqlite+aiosqlite:///./app.db
+   JWT_SECRET_KEY=changeme
+   JWT_ALGORITHM=HS256
+   ```
+
+   **frontend/.env (пример для Docker):**
+   ```
+   VITE_API_URL=http://backend:8000
    ```
 
 3. **Добавьте токены и секреты:**
-   - Откройте `.env` и `backend/.env`, добавьте ваш SCIBOX_API_KEY (получите у команды или организаторов).
-   - Задайте JWT_SECRET_KEY (можно любой уникальный, например [randomkeygen.com](https://randomkeygen.com/)).
-   - Остальные переменные оставьте дефолтными или уточните в README/у команды.
+   - Откройте `backend/.env`, добавьте ваш SCIBOX_API_KEY (или используйте тестовый).
+   - Задайте JWT_SECRET_KEY (любой уникальный).
+   - Остальные переменные оставьте как в примере выше.
 
 4. **Проверьте наличие Docker и Docker Compose**
    - Инструкция: [Install Docker](https://docs.docker.com/get-docker/)
