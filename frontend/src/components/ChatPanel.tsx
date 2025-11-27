@@ -20,9 +20,11 @@ type ChatMessage = {
 type Props = {
   sessionId: number | null
   onFinish?: () => void
+  onShowError?: (msg: string) => void
+  onChatUpdate?: (messages: ChatMessage[]) => void
 }
 
-export function ChatPanel({ sessionId, onFinish }: Props) {
+export function ChatPanel({ sessionId, onFinish, onShowError, onChatUpdate }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [draft, setDraft] = useState('')
   const [isSending, setIsSending] = useState(false)
@@ -36,6 +38,12 @@ export function ChatPanel({ sessionId, onFinish }: Props) {
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    if (sessionId && onChatUpdate) {
+      onChatUpdate(messages)
+    }
+  }, [messages, onChatUpdate, sessionId])
 
   const handleEvent = useCallback((event: ChatEvent) => {
     const extractMessage = (text?: string) => {
@@ -105,11 +113,16 @@ export function ChatPanel({ sessionId, onFinish }: Props) {
           }
           setIsSending(false)
         } else {
+          const friendly =
+            event.error && event.error.toLowerCase().includes('scibox')
+              ? 'Ошибка LLM: проверьте ключ доступа или попробуйте позже.'
+              : event.error || 'Ошибка чата'
           next[targetIndex] = {
             ...current,
             status: 'error',
-            content: event.error,
+            content: friendly,
           }
+          onShowError?.(friendly)
           setIsSending(false)
         }
         return next

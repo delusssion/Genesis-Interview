@@ -110,6 +110,11 @@ async def chat_stream(
         # typing event
         yield "event: typing\ndata: {}\n\n"
 
+        if not SCIBOX_API_KEY:
+            error_payload = json.dumps({"error": "SCIBOX_API_KEY not configured"}, ensure_ascii=False)
+            yield f"event: error\ndata: {error_payload}\n\n"
+            return
+
         headers = {
             "Authorization": f"Bearer {SCIBOX_API_KEY}",
             "Content-Type": "application/json",

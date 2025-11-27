@@ -21,13 +21,15 @@ export type TaskResponse = {
 export type RunResponse = {
   success: boolean
   task_id: string
-  results?: { test: number; passed: boolean }[]
+  results?: { test: number; passed: boolean; input?: unknown; expected?: unknown; got?: unknown; error?: string; details?: string }[]
   time_ms?: number
   state?: string
   hidden_failed?: boolean
   details?: string | null
   timeout?: boolean
   limit_exceeded?: boolean
+  stdout?: string
+  stderr?: string
 }
 
 export function fetchTask(session_id: number, level: 'junior' | 'middle' | 'senior') {

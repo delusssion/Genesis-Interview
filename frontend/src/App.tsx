@@ -74,7 +74,6 @@ type LanguageOption =
   | 'cpp'
   | 'csharp'
   | 'shell'
-  | 'shell'
 
 const techStack: Record<Track, { key: string; label: string; value: LanguageOption }[]> = {
   frontend: [
@@ -135,6 +134,27 @@ function App() {
   const [results, setResults] = useState<InterviewResult[]>([])
   const [selectedResult, setSelectedResult] = useState<InterviewResult | null>(null)
 
+  // восстанавливаем историю и последнюю страницу/сессию при перезагрузке
+  useEffect(() => {
+    const storedResults = localStorage.getItem('gi_results')
+    if (storedResults) {
+      try {
+        setResults(JSON.parse(storedResults))
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    const savedView = localStorage.getItem('gi_view') as View | null
+    const savedSession = localStorage.getItem('gi_session_id')
+    if (savedView === 'interview' && savedSession) {
+      setSessionId(Number(savedSession))
+      setView('interview')
+    }
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('gi_results', JSON.stringify(results))
+  }, [results])
   useEffect(() => {
     document.body.setAttribute('data-theme', theme)
   }, [theme])
@@ -182,6 +202,16 @@ function App() {
     if (fresh) setSelectedResult(fresh)
   }, [results, selectedResult])
 
+  useEffect(() => {
+    if (view !== 'interview') return
+    const workspace = document.getElementById('interview-workspace')
+    if (workspace) {
+      workspace.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [view])
+
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))
   }
@@ -219,6 +249,8 @@ function App() {
         setSessionId(newSessionId)
         setCurrentTaskId(null)
         setView('interview')
+        localStorage.setItem('gi_view', 'interview')
+        localStorage.setItem('gi_session_id', String(newSessionId))
         const now = new Date().toISOString()
         const newResult: InterviewResult = {
           sessionId: newSessionId,
@@ -562,6 +594,24 @@ function App() {
       <div className="workspace interview-workspace" id="interview-workspace">
         <ChatPanel
           sessionId={sessionId}
+          onChatUpdate={(msgs) => {
+            if (!sessionId) return
+            setResults((prev) =>
+              prev.map((r) =>
+                r.sessionId === sessionId
+                  ? {
+                      ...r,
+                      chat: msgs.map((m) => ({
+                        from: m.role === 'user' ? 'candidate' : 'interviewer',
+                        text: m.content,
+                        at: m.createdAt,
+                      })),
+                    }
+                  : r,
+              ),
+            )
+          }}
+          onShowError={(msg) => showToast(msg)}
           onFinish={() => {
             setShowFinishModal(true)
           }}
@@ -587,19 +637,21 @@ function App() {
           onShowResults={() => setView('results')}
           isAuthenticated={isAuthenticated}
           onLogout={async () => {
-          try {
-            await logoutApi()
-          } catch (_) {
-            /* silent */
-          }
-          setIsAuthenticated(false)
-          setSessionId(null)
-          setCurrentTaskId(null)
-          setSelectedResult(null)
-          setView('home')
-          showToast('Вы вышли из аккаунта')
-        }}
-        onGoHome={() => setView('home')}
+            try {
+              await logoutApi()
+            } catch (_) {
+              /* silent */
+            }
+            setIsAuthenticated(false)
+            setSessionId(null)
+            setCurrentTaskId(null)
+            setSelectedResult(null)
+            setView('home')
+            localStorage.removeItem('gi_view')
+            localStorage.removeItem('gi_session_id')
+            showToast('Вы вышли из аккаунта')
+          }}
+          onGoHome={() => setView('home')}
         />
       )}
 
@@ -613,17 +665,35 @@ function App() {
         <div className="modal-backdrop" onClick={() => setShowFinishModal(false)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <h3>Вы уверены, что хотите закончить интервью?</h3>
-            <p className="muted small">Результат не будет сохранен.</p>
+            <p className="muted small">Результат будет сохранён как незавершённое интервью.</p>
             <div className="modal-actions">
               <button
                 className="cta"
                 type="button"
                 onClick={() => {
                   setShowFinishModal(false)
+                  const sid = sessionId
+                  const now = new Date().toISOString()
+                  if (sid) {
+                    setResults((prev) =>
+                      prev.map((r) =>
+                        r.sessionId === sid
+                          ? {
+                              ...r,
+                              status: 'failed',
+                              feedback: r.feedback || 'Интервью завершено досрочно пользователем',
+                              updatedAt: now,
+                            }
+                          : r,
+                      ),
+                    )
+                  }
                   setSessionId(null)
                   setCurrentTaskId(null)
                   setView('home')
-                  showToast('Интервью завершено без сохранения')
+                  localStorage.removeItem('gi_view')
+                  localStorage.removeItem('gi_session_id')
+                  showToast('Интервью завершено, статус: незавершено')
                 }}
               >
                 Подтвердить

@@ -6,15 +6,16 @@ const DEFAULT_RETRIES = 1
 const RETRY_BASE_DELAY = 400
 
 async function parseError(res: Response) {
+  const text = await res.text()
   try {
-    const data = await res.json()
+    const data = JSON.parse(text)
     if (typeof data === 'string') return data
     if (data?.detail) return Array.isArray(data.detail) ? data.detail[0]?.msg ?? data.detail[0] : data.detail
     if (data?.message) return data.message
+    if (data?.error?.message) return data.error.message
   } catch (_) {
     /* noop */
   }
-  const text = await res.text()
   return text || `Request failed with status ${res.status}`
 }
 
