@@ -1,154 +1,78 @@
 # Genesis Interview Platform
 
-Комплекс для автоматизированных технических интервью на базе Scibox LLM. Репозиторий собирает фронтенд/бек/доки; стартуем с каркаса фронта для чекпоинта №1.
+Комплекс для автоматизированных технических интервью на базе Scibox LLM. Репозиторий объединяет фронтенд (Vite + React + TS) и бэкенд (FastAPI).
 
-## Чекпоинт 1 (Frontend)
-- Ветки: `feat/frontend-arch-setup` (влита), `feat/chat-mvp-mock` (влита), `feat/task-pane-state` (влита), `feat/ide-shell-mock` (влита), `feat/anticheat-hooks-ui` (влита), `docs/frontend-checkpoint1` (влита), `feat/auth-ui` (влита)
-- React + Vite + TypeScript, UI-шелл (направление/уровень, стейт-машина интервью), конфиг `VITE_API_URL`, моковый чат со стримингом статусов, карточка задачи с видимыми тестами, IDE-заглушка (run/check), анти-чит сигналы (моки), переключатель light/dark темы, форма login/register (мок)
-- Документация чекпоинта: `docs/frontend-checkpoint1.md` (экраны, контракты, стейты)
-
-## Запуск фронтенда
+## Локальный фронтенд
 ```bash
 cd frontend
-cp .env.example .env   # выставьте адрес FastAPI/Scibox
+cp .env.example .env   # выставьте адрес FastAPI
 npm install
 npm run dev
 ```
+Полезное: `frontend/src/App.tsx`, `frontend/src/shared/config/env.ts`, базовые стили в `frontend/src/index.css` и `frontend/src/App.css`. Основные модули: `ChatPanel`, `TaskPane`, `IdeShell`, `AntiCheatPanel`.
 
-### Полезное
-- Каркас UI: `frontend/src/App.tsx`
-- Env конфиг: `frontend/src/shared/config/env.ts`
-- Базовые стили/токены: `frontend/src/index.css`, `frontend/src/App.css`
-<<<<<<< HEAD
-- Чат + моковый стриминг: `frontend/src/components/ChatPanel.tsx`, `frontend/src/shared/api/chatMock.ts`
-- Карточка задачи + тесты (моки): `frontend/src/components/TaskPane.tsx`, `frontend/src/shared/api/taskMock.ts`
-- IDE заглушка: `frontend/src/components/IdeShell.tsx`, `frontend/src/shared/api/ideMock.ts`
-- Анти-чит сигналы (моки): `frontend/src/components/AntiCheatPanel.tsx`, `frontend/src/shared/api/antiCheatMock.ts`
-
-
-Дальше добавляем боевой раннер, анти-чит телеметрию и подключение реальных API/SSE.
-=======
-Дальше добавляем раннер интеграцию, анти-чит хуки и подключение реальных API/SSE.
-=======
-- Чат + SSE: `frontend/src/components/ChatPanel.tsx`, `frontend/src/shared/api/chat.ts`
-- Карточка задачи + тесты: `frontend/src/components/TaskPane.tsx`, `frontend/src/shared/api/tasks.ts`
-- IDE: `frontend/src/components/IdeShell.tsx`
-- Анти-чит сигналы: `frontend/src/components/AntiCheatPanel.tsx`, `frontend/src/shared/api/antiCheat.ts`
->>>>>>> 733880c4df49cabb106ab7b61324ba576f814964
-
-
-
----
-
-## 🚀 Универсальная инструкция для запуска через Docker
-
-**Для быстрого старта всей системы на любой ОС (Linux, Windows, Mac):**
-
-1. **Клонируйте репозиторий:**
-   ```bash
-   git clone https://github.com/V1lex/Genesis-Interview
-   cd Genesis-Interview
-   ```
-
-
-2. **Создайте файлы окружения и настройте значения для Docker:**
-   ```bash
-   cp backend/.env.example backend/.env
-   cp frontend/.env frontend/.env # если нет .env.example, просто скопируйте .env
-   ```
-
-   **backend/.env (пример для Docker):**
-   ```
-   BASE_URL=https://llm.t1v.scibox.tech/v1
-   OPENAI_API_KEY=sk-udaICyx6pCknu7cpZFZNFA
-   FRONTEND_ORIGIN=http://localhost:3000
-   URL_DATABASE=sqlite+aiosqlite:///./app.db
-   JWT_SECRET_KEY=changeme
-   JWT_ALGORITHM=HS256
-   ```
-
-   **frontend/.env (пример для Docker):**
-   ```
-   VITE_API_URL=http://backend:8000
-   ```
-
-3. **Добавьте токены и секреты:**
-   - Откройте `backend/.env`, добавьте ваш SCIBOX_API_KEY (или используйте тестовый).
-   - Задайте JWT_SECRET_KEY (любой уникальный).
-   - Остальные переменные оставьте как в примере выше.
-
-4. **Проверьте наличие Docker и Docker Compose**
-   - Инструкция: [Install Docker](https://docs.docker.com/get-docker/)
-
-5. **Запуск всех сервисов:**
-   ```bash
-   docker-compose up --build
-   ```
-
-6. **Доступ:**
-   - Frontend: [http://localhost:3000](http://localhost:3000)
-   - Backend API Swagger: [http://localhost:8000/docs](http://localhost:8000/docs)
-   - Backend root: [http://localhost:8000](http://localhost:8000)
-
-7. **Остановка и очистка:**
-   ```bash
-   docker-compose down
-   docker system prune -a
-   ```
-
----
-
-### 💡 Примечания
-
-- Все переменные окружения приведены в `.env.example` и `backend/.env.example`. Реальные токены НЕ хранятся в репозитории!
-- Health check реализован через эндпоинт `/health` FastAPI.
-- Все инструкции актуальны для стандартного Docker Compose v2.
-
----
-
-## 📁 Структура проекта
-
-```
-Genesis-Interview/
-├── backend/              # FastAPI приложение
-│   ├── schemas/
-│   ├── tables/
-│   ├── main.py
-│   ├── config.py
-│   ├── Dockerfile
-│   └── requirements.txt
-├── frontend/             # React + Vite + TypeScript
-│   ├── src/
-│   ├── public/
-│   ├── Dockerfile
-│   └── package.json
-├── docker-compose.yml    # оркестрация
-├── .env.example
-├── README.md
+## Запуск через Docker
+1) Клонирование  
+```bash
+git clone https://github.com/V1lex/Genesis-Interview
+cd Genesis-Interview
 ```
 
----
+2) Окружения  
+```bash
+cp .env.example .env
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+```
+Обязательно в `backend/.env`: `FRONTEND_ORIGIN=http://localhost:3000`. В `frontend/.env`: `VITE_API_URL=http://localhost:8000`.
 
-### 🐛 Troubleshooting
+3) UID/GID и права (чтобы SQLite была доступна контейнеру)  
+```bash
+export UID=$(id -u)
+export GID=$(id -g)
+```
+Если всё равно жалуется на readonly DB — временно выдать права каталогу: `chmod -R 777 backend`.
 
-- Если порты заняты — поменяйте их в docker-compose.yml.
-- Ошибки CORS — настройте FRONTEND_ORIGIN в backend/.env.
-- Для полной очистки:
-  ```bash
-  docker-compose down -v
-  docker system prune -a
-  ```
-- Полный ресет и чистый старт (если образы/контейнеры сломались):
+4) Чистый старт  
+```bash
+docker-compose down -v --remove-orphans && docker image prune -a
+docker-compose up --build -d
+```
+
+5) Доступ  
+- Frontend: http://localhost:3000  
+- Swagger: http://localhost:8000/docs  
+- Health: http://localhost:8000/health
+
+6) Остановка  
+```bash
+docker-compose down
+```
+
+7) Логи  
+```bash
+docker-compose logs -f backend
+docker-compose logs -f frontend
+```
+
+## Типовые проблемы
+- `Failed to fetch` при авторизации: проверь `FRONTEND_ORIGIN` в `backend/.env` и `VITE_API_URL` во фронтовом `.env`, перезапусти контейнеры.  
+- `attempt to write a readonly database`: задать `UID/GID` как выше или дать права каталогу `backend/`.  
+- Порты заняты: поменяй в `docker-compose.yml` маппинги `8000:8000` / `3000:80`.  
+- Полная очистка перед повторным запуском:  
   ```bash
   docker-compose down -v --remove-orphans && docker image prune -a
   docker-compose up --build -d
   ```
 
-<<<<<<< HEAD
----
-=======
----
-=======
-Дальше добавляем боевой раннер, анти-чит телеметрию и подключение реальных API/SSE.
-
->>>>>>> 733880c4df49cabb106ab7b61324ba576f814964
+## Структура
+```
+Genesis-Interview/
+├── backend/              # FastAPI приложение
+│   ├── main.py, routes/, models.py, schemas.py, Dockerfile
+├── frontend/             # React + Vite + TypeScript
+│   ├── src/, Dockerfile, package.json
+├── docker-compose.yml
+├── .env.example
+└── README.md
+```
