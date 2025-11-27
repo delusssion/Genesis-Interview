@@ -12,12 +12,17 @@ export async function login(identifier: string, password: string) {
   return res
 }
 
-export async function register(email: string, nickname: string, password: string) {
+export async function register(
+  email: string,
+  nickname: string,
+  password: string,
+  confirmPassword: string,
+) {
   return api.post<AuthResponse>('/auth/register', {
     email,
     nickname,
     password,
-    confirm_password: password,
+    confirm_password: confirmPassword,
   })
 }
 

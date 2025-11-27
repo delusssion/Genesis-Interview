@@ -38,7 +38,14 @@ export function AuthPanel({ onAuthSuccess, onRedirectHome, onNotify }: Props) {
         onAuthSuccess?.()
         setTimeout(() => onRedirectHome?.(), 1000)
       } else {
-        await register(form.email, form.nickname, form.password)
+        if (form.password !== form.confirmPassword) {
+          setStatus('error')
+          const err = 'Пароль и подтверждение не совпадают'
+          setMessage(err)
+          onNotify?.(err)
+          return
+        }
+        await register(form.email, form.nickname, form.password, form.confirmPassword)
         await login(form.nickname, form.password)
         setStatus('ok')
         setMessage('Успешная регистрация')
