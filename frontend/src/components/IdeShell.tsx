@@ -16,108 +16,20 @@ const languages: { id: Language; label: string }[] = [
 ]
 
 const defaultCode: Record<Language, string> = {
-  typescript: `function firstUniqueChar(s: string): number {
-  const counts = new Map<string, number>()
-  for (const ch of s) counts.set(ch, (counts.get(ch) ?? 0) + 1)
-  for (let i = 0; i < s.length; i++) if (counts.get(s[i]) === 1) return i
-  return -1
+  typescript: '',
+  javascript: '',
+  python: '',
+  go: '',
+  java: '',
+  cpp: '',
+  csharp: '',
+  shell: '',
 }
 
-console.log(firstUniqueChar("leetcode"))`,
-  javascript: `function firstUniqueChar(s) {
-  const counts = new Map()
-  for (const ch of s) counts.set(ch, (counts.get(ch) ?? 0) + 1)
-  for (let i = 0; i < s.length; i++) if (counts.get(s[i]) === 1) return i
-  return -1
-}
-
-console.log(firstUniqueChar("leetcode"))`,
-  python: `def first_unique_char(s: str) -> int:
-    counts = {}
-    for ch in s:
-        counts[ch] = counts.get(ch, 0) + 1
-    for i, ch in enumerate(s):
-        if counts[ch] == 1:
-            return i
-    return -1
-
-print(first_unique_char("leetcode"))`,
-  go: `package main
-
-import "fmt"
-
-func firstUniqueChar(s string) int {
-  counts := make(map[rune]int)
-  for _, ch := range s { counts[ch]++ }
-  for i, ch := range s { if counts[ch] == 1 { return i } }
-  return -1
-}
-
-func main() { fmt.Println(firstUniqueChar("leetcode")) }`,
-  java: `public class Main {
-    public static int firstUniqueChar(String s) {
-        int[] counts = new int[256];
-        for (char c : s.toCharArray()) counts[c]++;
-        for (int i = 0; i < s.length(); i++) if (counts[s.charAt(i)] == 1) return i;
-        return -1;
-    }
-
-    public static void main(String[] args) {
-        System.out.println(firstUniqueChar("leetcode"));
-    }
-}`,
-  cpp: `#include <bits/stdc++.h>
-using namespace std;
-
-int firstUniqueChar(const string& s) {
-  unordered_map<char,int> cnt;
-  for (char c : s) cnt[c]++;
-  for (int i = 0; i < (int)s.size(); ++i) if (cnt[s[i]] == 1) return i;
-  return -1;
-}
-
-int main() {
-  cout << firstUniqueChar("leetcode") << "\\n";
-  return 0;
-}
-`,
-  csharp: `using System;
-using System.Collections.Generic;
-
-class Program {
-  static int FirstUniqueChar(string s) {
-    var counts = new Dictionary<char, int>();
-    foreach (var ch in s) counts[ch] = counts.TryGetValue(ch, out var v) ? v + 1 : 1;
-    for (int i = 0; i < s.Length; i++) if (counts[s[i]] == 1) return i;
-    return -1;
-  }
-
-  static void Main() {
-    Console.WriteLine(FirstUniqueChar("leetcode"));
-  }
-}
-`,
-  shell: `#!/usr/bin/env bash
-# Подсчёт первого уникального символа в строке
-first_unique_char() {
-  local s="$1"
-  declare -A counts
-  local i ch
-  for (( i=0; i<\${#s}; i++ )); do
-    ch="\${s:$i:1}"
-    counts["$ch"]=$((counts["$ch"] + 1))
-  done
-  for (( i=0; i<\${#s}; i++ )); do
-    ch="\${s:$i:1}"
-    if [[ \${counts["$ch"]} -eq 1 ]]; then
-      echo "$i"; return 0
-    fi
-  done
-  echo -1
-}
-
-first_unique_char "leetcode"`,
-}
+const sampleTests = [
+  { title: 'Тест 1', input: '[1, 2, 3, 4]', expected: '6' },
+  { title: 'Тест 2', input: '[1, 5, 3, 5]', expected: '0' },
+]
 
 type Props = {
   sessionId: number | null
@@ -190,8 +102,8 @@ export function IdeShell({ sessionId, taskId, language: initialLang = 'typescrip
   }
 
   const handleRun = async () => {
-    if (!sessionId || !taskId) {
-      setOutput('Нужна сессия и задача для запуска')
+    if (!sessionId) {
+      setOutput('Нужна активная сессия для запуска')
       return
     }
     setStatus('running')
@@ -200,7 +112,7 @@ export function IdeShell({ sessionId, taskId, language: initialLang = 'typescrip
     try {
       const res = await runCode({
         session_id: sessionId,
-        task_id: taskId,
+        task_id: taskId ?? 'adhoc',
         language,
         code,
       })
@@ -212,7 +124,7 @@ export function IdeShell({ sessionId, taskId, language: initialLang = 'typescrip
         details: res.details,
         stderr: res.details,
       })
-      setOutput(res.results ? JSON.stringify(res.results, null, 2) : res.success ? 'ok' : 'Ошибка запуска')
+      setOutput(res.details || '')
       pushProgress({
         type: 'run',
         success: res.success,
@@ -228,8 +140,8 @@ export function IdeShell({ sessionId, taskId, language: initialLang = 'typescrip
   }
 
   const handleCheck = async () => {
-    if (!sessionId || !taskId) {
-      setOutput('Нужна сессия и задача для проверки')
+    if (!sessionId) {
+      setOutput('Нужна активная сессия для отправки решения')
       return
     }
     setStatus('checking')
@@ -238,7 +150,7 @@ export function IdeShell({ sessionId, taskId, language: initialLang = 'typescrip
     try {
       const res = await checkCode({
         session_id: sessionId,
-        task_id: taskId,
+        task_id: taskId ?? 'adhoc',
         language,
         code,
       })
@@ -246,12 +158,13 @@ export function IdeShell({ sessionId, taskId, language: initialLang = 'typescrip
       setRunResult({
         type: 'check',
         success: res.success,
+        results: res.results,
         details: res.details,
         hiddenFailed: res.hidden_failed,
         timeout: res.timeout,
         limitExceeded: res.limit_exceeded,
       })
-      setOutput(res.details || (res.success ? 'Скрытые тесты пройдены' : 'Ошибки в скрытых тестах'))
+      setOutput(res.details || 'Результаты отправлены интервьюеру, ждём ответ.')
       pushProgress({
         type: 'check',
         success: res.success,
@@ -300,7 +213,7 @@ export function IdeShell({ sessionId, taskId, language: initialLang = 'typescrip
             {status === 'running' ? 'Запуск...' : 'Запустить'}
           </button>
           <button className="cta" type="button" onClick={handleCheck} disabled={status !== 'idle'}>
-            {status === 'checking' ? 'Тесты...' : 'Прогнать тесты'}
+            {status === 'checking' ? 'Отправка...' : 'Отправить решение'}
           </button>
         </div>
       </div>
@@ -308,7 +221,7 @@ export function IdeShell({ sessionId, taskId, language: initialLang = 'typescrip
       <div className="ide-body">
         <div className="editor">
           <Editor
-            height="340px"
+            height="500px"
             language={language === 'typescript' ? 'typescript' : language}
             value={code}
             onChange={(value) => saveDraft(value || '')}
@@ -323,13 +236,12 @@ export function IdeShell({ sessionId, taskId, language: initialLang = 'typescrip
               {duration !== null && <p className="muted">Время: {duration} мс</p>}
             </div>
           </div>
-          {runResult?.stderr && <p className="muted">stderr: {runResult.stderr}</p>}
-          <pre>{output}</pre>
+          <pre>{output || ' '}</pre>
           {runResult && (
             <div className="visible-tests-card">
               <div className="panel-head">
                 <div>
-                  <p className="eyebrow">Видимые тесты</p>
+                  <p className="eyebrow">Тесты</p>
                   <p className="muted">Результаты последних прогонов</p>
                 </div>
               </div>
@@ -360,6 +272,13 @@ export function IdeShell({ sessionId, taskId, language: initialLang = 'typescrip
                     {runResult.timeout && <p className="muted">Таймаут</p>}
                   </div>
                 )}
+              </div>
+              <div className="sample-tests">
+                {sampleTests.map((sample) => (
+                  <p key={sample.title} className="muted">
+                    {sample.title}: Входные данные: {sample.input}; Ожидаемый вывод: {sample.expected}
+                  </p>
+                ))}
               </div>
             </div>
           )}

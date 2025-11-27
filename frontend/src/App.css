@@ -44,8 +44,8 @@
 }
 
 .runner-panel {
-  background: #ffffff;
-  border: 1px solid #e4e7ef;
+  background: color-mix(in srgb, var(--card) 94%, var(--bg) 6%);
+  border: 1px solid var(--stroke);
   box-shadow: 0 10px 40px rgba(15, 23, 42, 0.12);
   backdrop-filter: none;
 }
@@ -784,32 +784,40 @@ body[data-theme='dark'] .brand-title {
 }
 
 .runner-output {
-  border: 1px solid #e4e7ef;
+  border: 1px solid var(--stroke);
   border-radius: 14px;
   padding: 14px;
-  background: #ffffff;
+  background: color-mix(in srgb, var(--card) 94%, var(--bg) 6%);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-height: 500px;
 }
 
 .runner-output pre {
   white-space: pre-wrap;
-  background: #f8fafc;
+  background: color-mix(in srgb, var(--bg) 70%, var(--card) 30%);
   color: var(--text);
   padding: 12px;
   border-radius: 12px;
   min-height: 160px;
   margin: 0;
-  border: 1px dashed #e2e8f0;
+  border: 1px dashed var(--stroke);
 }
 
 .visible-tests-card {
-  border: 1px solid #e4e7ef;
+  border: 1px solid var(--stroke);
   border-radius: 12px;
   padding: 12px;
-  background: #f8fafc;
+  background: color-mix(in srgb, var(--bg) 70%, var(--card) 30%);
+}
+
+.sample-tests {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .chat-shell {
@@ -820,10 +828,10 @@ body[data-theme='dark'] .brand-title {
 
 .chat-fullscreen {
   padding: 18px 20px;
-  background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+  background: color-mix(in srgb, var(--card) 92%, var(--bg) 8%);
   color: var(--text);
   border-radius: 20px;
-  border: 1px solid #e4e7ef;
+  border: 1px solid var(--stroke);
   box-shadow: 0 10px 40px rgba(15, 23, 42, 0.12);
   backdrop-filter: none;
 }
@@ -836,7 +844,7 @@ body[data-theme='dark'] .brand-title {
   padding: 0 0 8px;
   position: sticky;
   top: 0;
-  background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 90%);
+  background: color-mix(in srgb, var(--card) 92%, var(--bg) 8%);
   z-index: 2;
 }
 
@@ -911,10 +919,10 @@ body[data-theme='dark'] .brand-title {
 }
 
 .chat-input {
-  border: 1px solid #e4e7ef;
+  border: 1px solid var(--stroke);
   border-radius: 14px;
   padding: 12px;
-  background: #ffffff;
+  background: color-mix(in srgb, var(--card) 92%, var(--bg) 8%);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -936,7 +944,7 @@ body[data-theme='dark'] .brand-title {
   padding: 12px;
   border-radius: 10px;
   border: 1px solid var(--stroke);
-  background: #f8fafc;
+  background: color-mix(in srgb, var(--bg) 70%, var(--card) 30%);
   color: var(--text);
 }
 
@@ -971,8 +979,8 @@ body[data-theme='dark'] .brand-title {
 }
 
 .ghost-btn {
-  border: 1px solid #d8deeb;
-  background: #f9fbff;
+  border: 1px solid var(--stroke);
+  background: color-mix(in srgb, var(--card) 85%, var(--bg) 15%);
   color: var(--text);
   border-radius: 12px;
   padding: 10px 14px;
@@ -982,7 +990,7 @@ body[data-theme='dark'] .brand-title {
 .ghost-btn.danger {
   border-color: rgba(239, 68, 68, 0.55);
   color: #b91c1c;
-  background: #fff1f2;
+  background: color-mix(in srgb, var(--card) 80%, #fff1f2 20%);
 }
 
 .task-card {
