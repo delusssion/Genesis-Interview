@@ -887,20 +887,25 @@ body[data-theme='dark'] .brand-title {
 }
 
 .bubble {
-  border: 1px solid #e4e7ef;
+  border: 1px solid var(--stroke);
   border-radius: 14px;
   padding: 12px 14px;
-  background: #ffffff;
+  background: color-mix(in srgb, var(--card) 88%, var(--bg) 12%);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  color: var(--text);
+}
+
+.bubble p {
+  color: var(--text);
 }
 
 .bubble-user {
-  background: #eef3ff;
-  border-color: #d6e4ff;
+  background: color-mix(in srgb, var(--primary) 12%, var(--card) 88%);
+  border-color: color-mix(in srgb, var(--primary) 25%, var(--stroke) 75%);
 }
 
 .bubble-assistant {
-  background: #ffffff;
+  background: color-mix(in srgb, var(--card) 92%, var(--bg) 8%);
 }
 
 .bubble-meta {

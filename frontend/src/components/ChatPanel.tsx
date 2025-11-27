@@ -222,6 +222,9 @@ export function ChatPanel({ sessionId, onFinish, onShowError, onChatUpdate }: Pr
           <p className="chat-subtitle">Чат с ИИ-интервьюером</p>
         </div>
         <div className="chat-actions">
+          <button className="ghost-btn" type="button" onClick={onToggleTheme}>
+            {theme === 'light' ? 'Темная тема' : 'Светлая тема'}
+          </button>
           <button className="ghost-btn danger" type="button" onClick={onFinish}>
             Завершить интервью
           </button>

@@ -136,6 +136,8 @@ async def chat_stream(
                     headers=headers,
                     json=payload,
                 ) as resp:
+                    # heartbeat to keep connection warm for proxies
+                    yield "event: heartbeat\ndata: {}\n\n"
                     if resp.status_code != 200:
                         detail = await resp.aread()
                         raise HTTPException(
@@ -162,26 +164,35 @@ async def chat_stream(
                             yield f"event: delta\ndata: {payload_delta}\n\n"
 
         except HTTPException as e:
-            error_payload = json.dumps({"error": str(e.detail)}, ensure_ascii=False)
+            detail = str(e.detail) or "LLM вернул ошибку"
+            error_payload = json.dumps({"error": detail}, ensure_ascii=False)
             yield f"event: error\ndata: {error_payload}\n\n"
             return
         except Exception as e:
-            error_payload = json.dumps({"error": str(e)}, ensure_ascii=False)
+            detail = str(e) or "Не удалось получить ответ от модели"
+            error_payload = json.dumps({"error": detail}, ensure_ascii=False)
             yield f"event: error\ndata: {error_payload}\n\n"
             return
 
-        final_message = final_text
+        final_message = final_text or ""
+        question_type = None
         try:
             parsed = json.loads(final_text)
             final_message = parsed.get("message", final_text)
             next_state = parsed.get("next_state", ses.state)
+            question_type = parsed.get("question_type")
         except Exception:
             next_state = ses.state
 
         # Save assistant reply into history and update state if needed
         try:
             ses_history = ses.history or []
-            ses_history.append(json.dumps({"role": "assistant", "content": final_message}, ensure_ascii=False))
+            ses_history.append(
+                json.dumps(
+                    {"role": "assistant", "content": final_message, "question_type": question_type},
+                    ensure_ascii=False,
+                )
+            )
             update_values = {"history": ses_history}
             if next_state and next_state != ses.state:
                 update_values["state"] = next_state
@@ -196,7 +207,9 @@ async def chat_stream(
             # don't break response if saving fails
             pass
 
-        final_event = json.dumps({"final": final_message}, ensure_ascii=False)
+        if not final_message:
+            final_message = "Модель не вернула ответ. Попробуйте отправить сообщение ещё раз."
+        final_event = json.dumps({"final": final_message, "question_type": question_type}, ensure_ascii=False)
         yield f"event: final\ndata: {final_event}\n\n"
 
     return StreamingResponse(

@@ -9,7 +9,7 @@ export type ChatSendPayload = {
 export type ChatEvent =
   | { type: 'typing' }
   | { type: 'delta'; delta: string }
-  | { type: 'final'; final: string }
+  | { type: 'final'; final: string; question_type?: 'tech' | 'soft' }
   | { type: 'error'; error: string }
   | { type: 'heartbeat' }
 
@@ -56,8 +56,9 @@ export function connectChatStream(
     es.addEventListener('final', (evt) => {
       try {
         const data = JSON.parse((evt as MessageEvent).data)
-        if (data?.final) onEvent({ type: 'final', final: data.final })
-        gotFinal = true;
+        if (data?.final)
+          onEvent({ type: 'final', final: data.final, question_type: data?.question_type })
+        gotFinal = true
       } catch {
         onEvent({ type: 'error', error: 'Invalid final event' })
       }
