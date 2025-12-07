@@ -4,26 +4,33 @@ from os import environ
 
 load_dotenv()
 
-FRONTEND_ORIGIN = environ.get("FRONTEND_ORIGIN")
+def _clean(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = value.strip()
+    return cleaned if cleaned else None
+
+
+FRONTEND_ORIGIN = _clean(environ.get("FRONTEND_ORIGIN"))
 if FRONTEND_ORIGIN is None:
     raise EnvironmentError("FRONTEND_ORIGIN key not found in env")
 
-JWT_SECRET_KEY = environ.get("JWT_SECRET_KEY")
+JWT_SECRET_KEY = _clean(environ.get("JWT_SECRET_KEY"))
 if JWT_SECRET_KEY is None:
     raise EnvironmentError("JWT_SECRET_KEY not found in env")
 
-JWT_ALGORITHM = environ.get("JWT_ALGORITHM")
+JWT_ALGORITHM = _clean(environ.get("JWT_ALGORITHM"))
 if JWT_ALGORITHM is None:
     raise EnvironmentError("JWT_ALGORITHM not found in env")
 
 JWT_ACCESS_TOKEN_EXPIRES_MINUTES = 30
 JWT_REFRESH_TOKEN_EXPIRES_DAYS = 14
 
-URL_DATABASE = environ.get("URL_DATABASE")
+URL_DATABASE = _clean(environ.get("URL_DATABASE"))
 if URL_DATABASE is None:
     raise EnvironmentError("URL_DATABASE not found in env")
 
 # Scibox configuration (optional)
-SCIBOX_API_KEY = environ.get("SCIBOX_API_KEY", "")
+SCIBOX_API_KEY = _clean(environ.get("SCIBOX_API_KEY", ""))
 # Base URL for Scibox LLM API (no trailing path)
-SCIBOX_BASE_URL = environ.get("SCIBOX_BASE_URL", "https://llm.t1v.scibox.tech")
+SCIBOX_BASE_URL = _clean(environ.get("SCIBOX_BASE_URL", "https://llm.t1v.scibox.tech")) or "https://llm.t1v.scibox.tech"

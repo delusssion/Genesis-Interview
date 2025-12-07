@@ -1,31 +1,30 @@
-type Result = {
-  sessionId: number
-  track: string
-  level: string
-  status: 'passed' | 'failed' | 'in-progress'
-  score?: number | null
-  updatedAt: string
-  feedback?: string
-}
+import type { InterviewResult } from '../shared/types/results'
 
 type Props = {
-  results: Result[]
+  results: InterviewResult[]
+  onSelect?: (result: InterviewResult) => void
 }
 
-export function ResultsPanel({ results }: Props) {
-  const items = results.length
-    ? results
-    : [
-        {
-          sessionId: 0,
-          track: 'Нет сессий',
-          level: '-',
-          status: 'in-progress',
-          score: null,
-          updatedAt: new Date().toISOString(),
-          feedback: 'Запусти интервью, чтобы увидеть историю.',
-        },
-      ]
+export function ResultsPanel({ results, onSelect }: Props) {
+  const items: InterviewResult[] =
+    results.length > 0
+      ? results
+      : [
+          {
+            sessionId: 0,
+            track: 'frontend',
+            level: 'junior',
+            status: 'in-progress',
+            score: null,
+            updatedAt: new Date().toISOString(),
+            startedAt: new Date().toISOString(),
+            feedback: 'Запусти интервью, чтобы увидеть историю.',
+            durationMinutes: undefined,
+            testsPassed: null,
+            testsTotal: null,
+            chat: [],
+          },
+        ]
 
   return (
     <div className="panel">
@@ -39,7 +38,18 @@ export function ResultsPanel({ results }: Props) {
       </div>
       <div className="results-grid">
         {items.map((res) => (
-          <div key={res.sessionId} className="result-card">
+          <button
+            key={res.sessionId}
+            className="result-card"
+            type="button"
+            onClick={() => onSelect?.(res)}
+            style={{
+              cursor: onSelect ? 'pointer' : 'default',
+              background: 'transparent',
+              border: 'none',
+              textAlign: 'left',
+            }}
+          >
             <div className="result-top">
               <span className="pill pill-ghost">
                 {res.sessionId ? `#${res.sessionId}` : '-'}
@@ -55,14 +65,27 @@ export function ResultsPanel({ results }: Props) {
             <div className="result-info">
               <div>{res.track}</div>
               <div className="muted">
-                {res.level} · {new Date(res.updatedAt).toLocaleDateString()}
+                {res.level} ·{' '}
+                {new Date(res.updatedAt).toLocaleDateString(undefined, {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                })}
               </div>
             </div>
             <div className="score">
               {res.score !== null && res.score !== undefined ? `${res.score} / 100` : '-'}
             </div>
+            <div className="muted small" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              {typeof res.testsPassed === 'number' && typeof res.testsTotal === 'number' ? (
+                <span>
+                  Тесты: {res.testsPassed}/{res.testsTotal}
+                </span>
+              ) : null}
+              {res.durationMinutes ? <span>Длительность: {res.durationMinutes} мин</span> : null}
+            </div>
             {res.feedback && <p className="muted">{res.feedback}</p>}
-          </div>
+          </button>
         ))}
       </div>
     </div>

@@ -20,11 +20,20 @@ type ChatMessage = {
 type Props = {
   sessionId: number | null
   onFinish?: () => void
+  onShowError?: (msg: string) => void
+  onChatUpdate?: (messages: ChatMessage[]) => void
   theme: 'light' | 'dark'
   onToggleTheme: () => void
 }
 
-export function ChatPanel({ sessionId, onFinish, theme, onToggleTheme }: Props) {
+export function ChatPanel({
+  sessionId,
+  onFinish,
+  onShowError,
+  onChatUpdate,
+  theme,
+  onToggleTheme,
+}: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [draft, setDraft] = useState('')
   const [isSending, setIsSending] = useState(false)
@@ -38,6 +47,12 @@ export function ChatPanel({ sessionId, onFinish, theme, onToggleTheme }: Props) 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    if (sessionId && onChatUpdate) {
+      onChatUpdate(messages)
+    }
+  }, [messages, onChatUpdate, sessionId])
 
   const handleEvent = useCallback((event: ChatEvent) => {
     const extractMessage = (text?: string) => {
@@ -107,11 +122,16 @@ export function ChatPanel({ sessionId, onFinish, theme, onToggleTheme }: Props) 
           }
           setIsSending(false)
         } else {
+          const friendly =
+            event.error && event.error.toLowerCase().includes('scibox')
+              ? 'Ошибка LLM: проверьте ключ доступа или попробуйте позже.'
+              : event.error || 'Ошибка чата'
           next[targetIndex] = {
             ...current,
             status: 'error',
-            content: event.error || 'Не удалось получить ответ. Попробуйте ещё раз.',
+            content: friendly,
           }
+          onShowError?.(friendly)
           setIsSending(false)
         }
         return next

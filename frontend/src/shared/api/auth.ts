@@ -8,6 +8,8 @@ export async function login(identifier: string, password: string) {
   const res = await api.post<AuthResponse>('/auth/login', { identifier, password })
   if (res.success && res.access_token) {
     localStorage.setItem('access_token', res.access_token)
+  } else {
+    localStorage.removeItem('access_token')
   }
   return res
 }
@@ -18,12 +20,19 @@ export async function register(
   password: string,
   confirmPassword: string,
 ) {
-  return api.post<AuthResponse>('/auth/register', {
+  const res = await api.post<AuthResponse>('/auth/register', {
     email,
     nickname,
     password,
     confirm_password: confirmPassword,
   })
+
+  // после успешной регистрации токен выдаётся в куках; очищаем старый локальный
+  if (res.success) {
+    localStorage.removeItem('access_token')
+  }
+
+  return res
 }
 
 export async function me() {

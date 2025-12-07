@@ -4,19 +4,15 @@ import { AuthPanel } from './components/AuthPanel'
 import { ChatPanel } from './components/ChatPanel'
 import { IdeShell } from './components/IdeShell'
 import { ResultsPanel } from './components/ResultsPanel'
+import { ResultDetails } from './components/ResultDetails'
 import { ShellHeader } from './components/ShellHeader'
 import { logout as logoutApi, me, refresh } from './shared/api/auth'
 import { startInterview } from './shared/api/interview'
+import type { InterviewResult, Track } from './shared/types/results'
 
-type View = 'home' | 'auth' | 'results' | 'interview'
+type View = 'home' | 'auth' | 'results' | 'resultDetail' | 'interview'
 type DurationOption = 15 | 30 | 60 | 120
-type Track =
-  | 'frontend'
-  | 'backend'
-  | 'data'
-  | 'ml'
-  | 'devops'
-  | 'mobile'
+// Track type импортируется из shared/types
 
 const trackCards: {
   id: Track
@@ -135,18 +131,30 @@ function App() {
   const [selectedDuration, setSelectedDuration] = useState<DurationOption>(15)
   const [showFinishModal, setShowFinishModal] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [results, setResults] = useState<
-    {
-      sessionId: number
-      track: string
-      level: string
-      status: 'in-progress' | 'passed' | 'failed'
-      score?: number | null
-      feedback?: string
-      updatedAt: string
-    }[]
-  >([])
+  const [results, setResults] = useState<InterviewResult[]>([])
+  const [selectedResult, setSelectedResult] = useState<InterviewResult | null>(null)
 
+  // восстанавливаем историю и последнюю страницу/сессию при перезагрузке
+  useEffect(() => {
+    const storedResults = localStorage.getItem('gi_results')
+    if (storedResults) {
+      try {
+        setResults(JSON.parse(storedResults))
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    const savedView = localStorage.getItem('gi_view') as View | null
+    const savedSession = localStorage.getItem('gi_session_id')
+    if (savedView === 'interview' && savedSession) {
+      setSessionId(Number(savedSession))
+      setView('interview')
+    }
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('gi_results', JSON.stringify(results))
+  }, [results])
   useEffect(() => {
     document.body.setAttribute('data-theme', theme)
   }, [theme])
@@ -187,6 +195,12 @@ function App() {
     setSelectedLanguage(null)
     setSelectedStacks([])
   }, [selectedTrack])
+
+  useEffect(() => {
+    if (!selectedResult) return
+    const fresh = results.find((r) => r.sessionId === selectedResult.sessionId)
+    if (fresh) setSelectedResult(fresh)
+  }, [results, selectedResult])
 
   useEffect(() => {
     if (view !== 'interview') return
@@ -235,18 +249,32 @@ function App() {
         setSessionId(newSessionId)
         setCurrentTaskId(null)
         setView('interview')
+        localStorage.setItem('gi_view', 'interview')
+        localStorage.setItem('gi_session_id', String(newSessionId))
         const now = new Date().toISOString()
+        const newResult: InterviewResult = {
+          sessionId: newSessionId,
+          track: selectedTrack,
+          level: selectedLevel,
+          status: 'in-progress',
+          score: null,
+          feedback: 'Сессия в работе',
+          startedAt: now,
+          updatedAt: now,
+          durationMinutes: selectedDuration,
+          testsPassed: null,
+          testsTotal: null,
+          chat: [
+            {
+              from: 'interviewer',
+              text: 'Привет! Я проведу твоё интервью. Расскажи кратко о себе и опыте.',
+              at: now,
+            },
+          ],
+        }
         setResults((prev) =>
           [
-            {
-              sessionId: newSessionId,
-              track: selectedTrack,
-              level: selectedLevel,
-              status: 'in-progress' as const,
-              score: null,
-              feedback: '',
-              updatedAt: now,
-            },
+            newResult,
             ...prev.filter((r) => r.sessionId !== newSessionId),
           ].slice(0, 6),
         )
@@ -282,17 +310,36 @@ function App() {
           : data.testsPassed && data.testsTotal
             ? Math.round((data.testsPassed / data.testsTotal) * 100)
             : existing?.score ?? null
-      const merged = {
+      const now = new Date().toISOString()
+      const updated = prev.map((res) =>
+        res.sessionId === data.sessionId
+          ? {
+              ...res,
+              status,
+              score,
+              feedback: data.feedback ?? res.feedback,
+              testsPassed: data.testsPassed ?? res.testsPassed ?? null,
+              testsTotal: data.testsTotal ?? res.testsTotal ?? null,
+              updatedAt: now,
+            }
+          : res,
+      )
+      if (existing) return updated.slice(0, 6)
+      const newResult: InterviewResult = {
         sessionId: data.sessionId,
-        track: existing?.track ?? selectedTrack,
-        level: existing?.level ?? selectedLevel,
+        track: selectedTrack,
+        level: selectedLevel,
         status,
         score,
-        feedback: data.feedback ?? existing?.feedback,
-        updatedAt: new Date().toISOString(),
+        feedback: data.feedback ?? '',
+        updatedAt: now,
+        startedAt: now,
+        durationMinutes: selectedDuration,
+        testsPassed: data.testsPassed ?? null,
+        testsTotal: data.testsTotal ?? null,
+        chat: [],
       }
-      const rest = prev.filter((r) => r.sessionId !== data.sessionId)
-      return [merged, ...rest].slice(0, 6)
+      return [newResult, ...updated].slice(0, 6)
     })
   }
 
@@ -518,9 +565,29 @@ function App() {
           Вернуться в меню
         </button>
       </div>
-      <ResultsPanel results={results} />
+      <ResultsPanel
+        results={results}
+        onSelect={(res) => {
+          setSelectedResult(res)
+          setView('resultDetail')
+        }}
+      />
     </div>
   )
+
+  const renderResultDetail = () => {
+    if (!selectedResult) return renderResults()
+    return (
+      <div className="full-card">
+        <ResultDetails
+          result={selectedResult}
+          onBack={() => {
+            setView('results')
+          }}
+        />
+      </div>
+    )
+  }
 
   const renderInterview = () => (
     <main className="layout interview-layout">
@@ -529,6 +596,24 @@ function App() {
           sessionId={sessionId}
           theme={theme}
           onToggleTheme={toggleTheme}
+          onChatUpdate={(msgs) => {
+            if (!sessionId) return
+            setResults((prev) =>
+              prev.map((r) =>
+                r.sessionId === sessionId
+                  ? {
+                      ...r,
+                      chat: msgs.map((m) => ({
+                        from: m.role === 'user' ? 'candidate' : 'interviewer',
+                        text: m.content,
+                        at: m.createdAt,
+                      })),
+                    }
+                  : r,
+              ),
+            )
+          }}
+          onShowError={(msg) => showToast(msg)}
           onFinish={() => {
             setShowFinishModal(true)
           }}
@@ -538,7 +623,6 @@ function App() {
           sessionId={sessionId}
           taskId={currentTaskId}
           language={(selectedLanguage ?? 'typescript') as LanguageOption}
-          theme={theme}
           onProgress={handleProgressUpdate}
         />
       </div>
@@ -563,7 +647,10 @@ function App() {
             setIsAuthenticated(false)
             setSessionId(null)
             setCurrentTaskId(null)
+            setSelectedResult(null)
             setView('home')
+            localStorage.removeItem('gi_view')
+            localStorage.removeItem('gi_session_id')
             showToast('Вы вышли из аккаунта')
           }}
           onGoHome={() => setView('home')}
@@ -573,23 +660,42 @@ function App() {
       {view === 'home' && renderHome()}
       {view === 'auth' && renderAuth()}
       {view === 'results' && renderResults()}
+      {view === 'resultDetail' && renderResultDetail()}
       {view === 'interview' && renderInterview()}
 
       {showFinishModal && (
         <div className="modal-backdrop" onClick={() => setShowFinishModal(false)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <h3>Вы уверены, что хотите закончить интервью?</h3>
-            <p className="muted small">Результат не будет сохранен.</p>
+            <p className="muted small">Результат будет сохранён как незавершённое интервью.</p>
             <div className="modal-actions">
               <button
                 className="cta"
                 type="button"
                 onClick={() => {
                   setShowFinishModal(false)
+                  const sid = sessionId
+                  const now = new Date().toISOString()
+                  if (sid) {
+                    setResults((prev) =>
+                      prev.map((r) =>
+                        r.sessionId === sid
+                          ? {
+                              ...r,
+                              status: 'failed',
+                              feedback: r.feedback || 'Интервью завершено досрочно пользователем',
+                              updatedAt: now,
+                            }
+                          : r,
+                      ),
+                    )
+                  }
                   setSessionId(null)
                   setCurrentTaskId(null)
                   setView('home')
-                  showToast('Интервью завершено без сохранения')
+                  localStorage.removeItem('gi_view')
+                  localStorage.removeItem('gi_session_id')
+                  showToast('Интервью завершено, статус: незавершено')
                 }}
               >
                 Подтвердить

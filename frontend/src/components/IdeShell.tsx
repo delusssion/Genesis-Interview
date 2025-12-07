@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Editor from '@monaco-editor/react'
 import { checkCode, runCode } from '../shared/api/tasks'
+import { sendMessage } from '../shared/api/chat'
 
 type Language = 'typescript' | 'javascript' | 'python' | 'go' | 'java' | 'cpp' | 'csharp' | 'shell'
 
@@ -72,6 +73,7 @@ export function IdeShell({
   const [status, setStatus] = useState<'idle' | 'running' | 'checking'>('idle')
   const [duration, setDuration] = useState<number | null>(null)
   const [runResult, setRunResult] = useState<RunResult | null>(null)
+  const [resultsView, setResultsView] = useState<string>('')
 
   const storageKey = useMemo(() => `ide-draft-${language}`, [language])
 
@@ -131,7 +133,9 @@ export function IdeShell({
         details: res.details,
         stderr: res.details,
       })
-      setOutput(res.details || '')
+      setResultsView(JSON.stringify(res.results ?? [], null, 2))
+      const streams = [res.details, res.stdout, res.stderr].filter(Boolean).join('\n')
+      setOutput(streams || 'Код выполнен')
       pushProgress({
         type: 'run',
         success: res.success,
@@ -171,7 +175,17 @@ export function IdeShell({
         timeout: res.timeout,
         limitExceeded: res.limit_exceeded,
       })
+      setResultsView(JSON.stringify(res.results ?? [], null, 2))
       setOutput(res.details || 'Результаты отправлены интервьюеру, ждём ответ.')
+      // Отправляем итог в чат
+      try {
+        await sendMessage({
+          session_id: sessionId,
+          message: `Отправил решение по задаче ${taskId ?? 'adhoc'}:\n${res.details || ''}`,
+        })
+      } catch (_) {
+        /* ignore */
+      }
       pushProgress({
         type: 'check',
         success: res.success,
@@ -244,6 +258,14 @@ export function IdeShell({
             </div>
           </div>
           <pre>{output || ' '}</pre>
+          {resultsView && (
+            <>
+              <p className="eyebrow" style={{ marginTop: 8 }}>
+                Детали тестов
+              </p>
+              <pre>{resultsView}</pre>
+            </>
+          )}
           {runResult && (
             <div className="visible-tests-card">
               <div className="panel-head">
