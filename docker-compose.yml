@@ -27,7 +27,7 @@ services:
     env_file:
       - backend/.env
     environment:
-      URL_DATABASE: "postgresql+asyncpg://${POSTGRES_USER:-genesis}:${POSTGRES_PASSWORD:-genesis}@db:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-genesis}"
+      URL_DATABASE: "postgresql+asyncpg://${POSTGRES_USER:-genesis}:${POSTGRES_PASSWORD:-genesis}@db:5432/${POSTGRES_DB:-genesis}"
       FRONTEND_ORIGIN: "${FRONTEND_ORIGIN:-http://localhost:${FRONTEND_PORT:-3000}}"
     ports:
       - "${BACKEND_PORT:-8000}:8000"
@@ -38,7 +38,7 @@ services:
       - backend
       - frontend
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
