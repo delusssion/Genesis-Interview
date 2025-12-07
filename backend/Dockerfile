@@ -17,31 +17,16 @@ RUN pip install --no-cache-dir -r requirements.txt \
 COPY . .
 
 # ========================================
-# Runtime слой (чистый alpine + скопированный Python)
+# Runtime слой (alpine с Python)
 # ========================================
-FROM alpine:3.20 AS production
+FROM python:3.11-alpine AS production
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/opt/venv/bin:/usr/local/bin:$PATH"
 
-# Минимальные runtime зависимости
-RUN apk add --no-cache libstdc++ libgcc libpq libffi
-
-# Копируем интерпретатор и stdlib из builder
-COPY --from=builder /usr/local/bin/python3 /usr/local/bin/python3
-COPY --from=builder /usr/local/lib/python3.11 /usr/local/lib/python3.11
-COPY --from=builder /usr/local/lib/libpython3.11.so* /usr/local/lib/
-RUN ln -sf /usr/local/bin/python3 /usr/local/bin/python
-
-# Чистим stdlib от тестов/демо и статик-артефактов
-RUN rm -rf /usr/local/lib/python3.11/ensurepip \
-           /usr/local/lib/python3.11/lib2to3 \
-           /usr/local/lib/python3.11/distutils \
-    && find /usr/local/lib/python3.11 -name "__pycache__" -prune -exec rm -rf {} + \
-    && find /usr/local/lib/python3.11 -type d \( -name "test" -o -name "tests" -o -name "turtledemo" -o -name "idlelib" -o -name "tkinter" \) -prune -exec rm -rf {} + \
-    && find /usr/local/lib/python3.11 -name "*.a" -delete \
-    && find /usr/local/lib/python3.11 -name "*.pyc" -delete
+# Минимальные runtime зависимости из базового python:3.11-alpine
+# asyncpg работает без libpq, поэтому дополнительных пакетов не ставим
 
 # Создаём непривилегированного пользователя
 RUN addgroup --system app && adduser --system --ingroup app app
@@ -54,11 +39,16 @@ COPY --from=builder /app /app
 # Чистим окружение от кешей и лишних пакетов
 RUN find /opt/venv -name "__pycache__" -prune -exec rm -rf {} + \
     && find /opt/venv -name "*.pyc" -delete \
+    && rm -rf /opt/venv/lib/python3.11/ensurepip \
+              /opt/venv/lib/python3.11/lib2to3 \
+              /opt/venv/lib/python3.11/distutils \
     && rm -rf /opt/venv/lib/python3.11/site-packages/pip \
               /opt/venv/lib/python3.11/site-packages/setuptools \
               /opt/venv/lib/python3.11/site-packages/wheel \
-    && find /opt/venv/lib/python3.11/site-packages -type d \
-         \( -name "tests" -o -name "testing" -o -name "test" \) -prune -exec rm -rf {} +
+    && find /opt/venv/lib/python3.11 -type d \
+         \( -name "tests" -o -name "testing" -o -name "test" -o -name "turtledemo" -o -name "idlelib" -o -name "tkinter" \) \
+         -prune -exec rm -rf {} + \
+    && find /opt/venv -name "*.a" -delete
 
 USER app
 
