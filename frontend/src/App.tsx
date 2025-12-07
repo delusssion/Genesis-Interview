@@ -305,9 +305,9 @@ function App() {
       <div className="background-blob blob-3" />
 
       <section className="hero hero-dribbble">
-        <h1 className="hero-title">Genesis Interview – автоматизированное интервью за 15 минут</h1>
+        <h1 className="hero-title">Genesis Interview - автоматизированное интервью за 15 минут</h1>
         <p className="hero-subtitle">
-          Пройди собеседование в реальных условиях: выбери специализацию, уровень и стек — и система
+          Пройди собеседование в реальных условиях: выбери специализацию, уровень и стек - и система
           сгенерирует интервью, адаптированное под тебя.
         </p>
       </section>
@@ -468,7 +468,7 @@ function App() {
             </div>
             <div className="info-card">
               <span className="info-icon">❓</span>
-              <h4>5–30 вопросов</h4>
+              <h4>5-30 вопросов</h4>
               <p>Технические и ситуационные вопросы</p>
             </div>
             <div className="info-card">

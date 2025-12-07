@@ -19,7 +19,7 @@ export function ResultsPanel({ results }: Props) {
         {
           sessionId: 0,
           track: 'Нет сессий',
-          level: '—',
+          level: '-',
           status: 'in-progress',
           score: null,
           updatedAt: new Date().toISOString(),
@@ -42,7 +42,7 @@ export function ResultsPanel({ results }: Props) {
           <div key={res.sessionId} className="result-card">
             <div className="result-top">
               <span className="pill pill-ghost">
-                {res.sessionId ? `#${res.sessionId}` : '—'}
+                {res.sessionId ? `#${res.sessionId}` : '-'}
               </span>
               <span className={`status status-${res.status}`}>
                 {res.status === 'passed'
@@ -59,7 +59,7 @@ export function ResultsPanel({ results }: Props) {
               </div>
             </div>
             <div className="score">
-              {res.score !== null && res.score !== undefined ? `${res.score} / 100` : '—'}
+              {res.score !== null && res.score !== undefined ? `${res.score} / 100` : '-'}
             </div>
             {res.feedback && <p className="muted">{res.feedback}</p>}
           </div>

@@ -1,77 +1,71 @@
 # Genesis Interview Platform
 
-Комплекс для автоматизированных технических интервью на базе Scibox LLM. Репозиторий объединяет фронтенд (Vite + React + TS) и бэкенд (FastAPI).
+Многоконтейнерное приложение для автоматизированных техинтервью: FastAPI backend + Vite/React frontend + PostgreSQL. Сборка оптимизирована multi-stage Dockerfile-ами, сервисы связаны через изолированные сети и healthcheck-ами.
 
-## Локальный фронтенд
-```bash
-cd frontend
-cp .env.example .env   # выставьте адрес FastAPI
-npm install
-npm run dev
-```
-Полезное: `frontend/src/App.tsx`, `frontend/src/shared/config/env.ts`, базовые стили в `frontend/src/index.css` и `frontend/src/App.css`. Основные модули: `ChatPanel`, `TaskPane`, `IdeShell`, `AntiCheatPanel`.
+## Что внутри
+- `docker-compose.yml` - 3 основных сервиса (frontend, backend, db) + опциональный Adminer (профиль `dev/tools`), сети `frontend/backend`, volume `postgres_data`, healthcheck и `depends_on: service_healthy`.
+- `backend/Dockerfile` - multi-stage (builder + production), non-root пользователь, healthcheck по `/health`.
+- `frontend/Dockerfile` - multi-stage (deps + build + nginx), кастомный `nginx.conf`, healthcheck.
+- `.env.example`, `backend/.env.example`, `frontend/.env.example` - все переменные окружения с дефолтами.
 
-## Запуск через Docker
-1) Клонирование  
-```bash
-git clone https://github.com/V1lex/Genesis-Interview
-cd Genesis-Interview
-```
-
-2) Окружения  
+## Быстрый старт (Docker Compose)
 ```bash
 cp .env.example .env
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
-```
-Обязательно в `backend/.env`: `FRONTEND_ORIGIN=http://localhost:3000`. В `frontend/.env`: `VITE_API_URL=http://localhost:8000`.
 
-3) UID/GID и права (чтобы SQLite была доступна контейнеру)  
-```bash
-export UID=$(id -u)
-export GID=$(id -g)
-```
-Если всё равно жалуется на readonly DB — временно выдать права каталогу: `chmod -R 777 backend`.
+# Сборка и запуск
+docker compose up -d --build
 
-4) Чистый старт  
-```bash
-docker-compose down -v --remove-orphans && docker image prune -a
-docker-compose up --build -d
+# Проверка
+docker compose ps
+docker compose logs -f backend
+docker compose logs -f frontend
 ```
-
-5) Доступ  
+Доступы:  
 - Frontend: http://localhost:3000  
 - Swagger: http://localhost:8000/docs  
-- Health: http://localhost:8000/health
+- Health: http://localhost:8000/health  
+- Adminer (по профилю): http://localhost:8080
 
-6) Остановка  
+Остановка/очистка:
 ```bash
-docker-compose down
+docker compose down              # остановка
+docker compose down -v           # + удалить данные Postgres
+docker system prune -a           # полностью почистить образы/кэш
 ```
 
-7) Логи  
-```bash
-docker-compose logs -f backend
-docker-compose logs -f frontend
-```
+## Переменные окружения
+- Корень `.env.example`: порты, креды Postgres, `COMPOSE_PROJECT_NAME`, `VITE_API_URL`, `FRONTEND_ORIGIN`.
+- `backend/.env.example`: `JWT_SECRET_KEY`, `JWT_ALGORITHM`, `URL_DATABASE` (по умолчанию Postgres `db`), опционально `SCIBOX_API_KEY/SCIBOX_BASE_URL`.
+- `frontend/.env.example`: `VITE_API_URL` (адрес FastAPI).
+Перед запуском скопируйте `*.example` → `.env`, заполните реальные токены (не коммитить!).
 
-## Типовые проблемы
-- `Failed to fetch` при авторизации: проверь `FRONTEND_ORIGIN` в `backend/.env` и `VITE_API_URL` во фронтовом `.env`, перезапусти контейнеры.  
-- `attempt to write a readonly database`: задать `UID/GID` как выше или дать права каталогу `backend/`.  
-- Порты заняты: поменяй в `docker-compose.yml` маппинги `8000:8000` / `3000:80`.  
-- Полная очистка перед повторным запуском:  
-  ```bash
-  docker-compose down -v --remove-orphans && docker image prune -a
-  docker-compose up --build -d
-  ```
+## Dev-профиль и отладка БД
+Запустить Adminer вместе с основными сервисами:
+```bash
+docker compose --profile dev up -d adminer
+```
+Подключение в UI: host `db`, user/password из `.env`, db по умолчанию `genesis`.
+
+## Локальная разработка без Docker
+- Backend: `cd backend && pip install -r requirements.txt && uvicorn main:app --reload`
+- Frontend: `cd frontend && npm install && npm run dev`
+Не забудьте выставить переменные окружения аналогично `.env.example`.
+
+## Проверки
+- `docker compose config` - сверка итоговой конфигурации.
+- Healthcheck-и: Postgres `pg_isready`, backend `/health`, frontend `/health`.
 
 ## Структура
 ```
 Genesis-Interview/
-├── backend/              # FastAPI приложение
-│   ├── main.py, routes/, models.py, schemas.py, Dockerfile
-├── frontend/             # React + Vite + TypeScript
-│   ├── src/, Dockerfile, package.json
+├── backend/              # FastAPI
+│   ├── Dockerfile
+│   ├── routes/, models.py, schemas.py, config.py
+├── frontend/             # Vite + React + TS
+│   ├── Dockerfile
+│   ├── nginx.conf, src/
 ├── docker-compose.yml
 ├── .env.example
 └── README.md

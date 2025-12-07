@@ -16,15 +16,15 @@ npm run dev
 ```
 
 ### Команды
-- `npm run dev` — локальная разработка
-- `npm run build` — сборка
-- `npm run lint` — базовый ESLint
+- `npm run dev` - локальная разработка
+- `npm run build` - сборка
+- `npm run lint` - базовый ESLint
 
 ## Что есть
 - Shell с брендингом и индикацией env (`src/components/ShellHeader.tsx`)
 - Выбор направления/уровня (`src/components/TrackSelection.tsx`)
 - Чат с ИИ (SSE) (`src/components/ChatPanel.tsx`, `src/shared/api/chat.ts`)
-- Карточка задачи + видимые тесты + стейт (task_issued → awaiting_solution → evaluating → feedback_ready) (`src/components/TaskPane.tsx`, `src/shared/api/tasks.ts`)
+- Карточка задачи + видимые тесты + стейт (task_issued -> awaiting_solution -> evaluating -> feedback_ready) (`src/components/TaskPane.tsx`, `src/shared/api/tasks.ts`)
 - IDE: Monaco editor + Run/Check через бэкенд (`src/components/IdeShell.tsx`)
 - Анти-чит сигналы: copy/paste/blur/focus/devtools (`src/components/AntiCheatPanel.tsx`, `src/shared/api/antiCheat.ts`)
 - Общие стили и токены (`src/index.css`, `src/App.css`)

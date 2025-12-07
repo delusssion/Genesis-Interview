@@ -218,7 +218,7 @@ export function TaskPane({ sessionId, level, language = 'typescript', onTaskChan
         </div>
         <div className="metric-card">
           <p className="muted">Качество кода</p>
-          <h4>{quality !== null ? `${quality}/100` : '—'}</h4>
+          <h4>{quality !== null ? `${quality}/100` : '-'}</h4>
           <p className="muted">Оценка LLM/бека (эвристика)</p>
         </div>
       </div>

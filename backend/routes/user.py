@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, Response
 from fastapi.routing import APIRouter
 from sqlalchemy import select, or_
-from pwdlib.hashers.argon2 import Argon2Hasher
+from passlib.context import CryptContext
 
 from auth import decode_token, encode_token
 from dependencies import sessionDep, get_access_token, get_refresh_token
@@ -11,7 +11,8 @@ from models import UserModel
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-hasher = Argon2Hasher()
+# Уходим от bcrypt-ограничений: используем pbkdf2_sha256 (без нативных зависимостей)
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 
 @router.get("/me")
@@ -80,7 +81,7 @@ async def auth_post_register(user_register: UserRegisterSchema, session: session
             status_code=409, detail="User with such email already registered"
         )
 
-    hashed_password = hasher.hash(user_register.password)
+    hashed_password = pwd_context.hash(user_register.password)
     user = UserModel(
         nickname=user_register.nickname,
         email=user_register.email,
@@ -106,7 +107,7 @@ async def auth_post_login(user_login: UserLoginSchema, response: Response, sessi
             status_code=401, detail="Пользователь с таким ником или email не найден"
         )
 
-    if not hasher.verify(user_login.password, user.password):
+    if not pwd_context.verify(user_login.password, user.password):
         raise HTTPException(status_code=401, detail="Неверный пароль")
 
     access_token = encode_token("access_token", user.uid)
