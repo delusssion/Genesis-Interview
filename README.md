@@ -1,12 +1,12 @@
 # Genesis Interview Platform
 
-Многоконтейнерное приложение для автоматизированных техинтервью: FastAPI backend + Vite/React frontend + PostgreSQL. Сборка оптимизирована multi-stage Dockerfile-ами, сервисы связаны через изолированные сети и healthcheck-ами.
+Платформа для автоматизации техинтервью в формате нескольких контейнеров: FastAPI на бэкенде, Vite/React на фронте и PostgreSQL в качестве базы. Сервисы собираются через многослойные Dockerfile и соединены изолированными сетями с healthcheck-ами.
 
 ## Что внутри
-- `docker-compose.yml` - 3 основных сервиса (frontend, backend, db) + опциональный Adminer (профиль `dev/tools`), сети `frontend/backend`, volume `postgres_data`, healthcheck и `depends_on: service_healthy`.
-- `backend/Dockerfile` - multi-stage (builder + production), non-root пользователь, healthcheck по `/health`.
-- `frontend/Dockerfile` - multi-stage (deps + build + nginx), кастомный `nginx.conf`, healthcheck.
-- `.env.example`, `backend/.env.example`, `frontend/.env.example` - все переменные окружения с дефолтами.
+- `docker-compose.yml` — три основные службы (frontend, backend, db) плюс Adminer по профилю `dev/tools`; отдельные сети `frontend/backend`, volume `postgres_data`, `depends_on: service_healthy`, встроенные healthcheck-и.
+- `backend/Dockerfile` — сборка в два этапа (build → runtime), пользователь без root-прав, проверка здоровья по `/health`.
+- `frontend/Dockerfile` — цепочка слоев (установка зависимостей → сборка → nginx-слой), подключен кастомный `nginx.conf`, прописан healthcheck.
+- `.env.example`, `backend/.env.example`, `frontend/.env.example` — шаблоны переменных окружения с дефолтными значениями.
 
 ## Быстрый старт (Docker Compose)
 ```bash
@@ -54,7 +54,7 @@ docker compose --profile dev up -d adminer
 Не забудьте выставить переменные окружения аналогично `.env.example`.
 
 ## Проверки
-- `docker compose config` - сверка итоговой конфигурации.
+- `docker compose config` — сверка итоговой конфигурации.
 - Healthcheck-и: Postgres `pg_isready`, backend `/health`, frontend `/health`.
 
 ## Структура
