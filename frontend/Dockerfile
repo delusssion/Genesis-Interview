@@ -1,38 +1,25 @@
-FROM node:18-alpine AS deps
-
+# Stage: deps
+FROM node:18-alpine AS base
 WORKDIR /app
-
 COPY package*.json ./
-RUN npm ci --silent
+RUN npm ci
 
-# ========================================
-# Сборка фронта
-# ========================================
-FROM node:18-alpine AS builder
-
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# Stage: build
+FROM base AS build
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 COPY . .
-
-# Build аргумент для Vite (адрес API)
-ARG VITE_API_URL=http://localhost:8000
-ENV VITE_API_URL=${VITE_API_URL}
-
 RUN npm run build
 
-# ========================================
-# Продакшн-слой через nginx
-# ========================================
-FROM nginx:alpine AS production
-
+# Stage: nginx minimal
+FROM nginx:alpine AS prod
 WORKDIR /usr/share/nginx/html
+COPY --from=build /app/dist ./
 
-COPY --from=builder /app/dist ./
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --spider -q http://localhost/ || exit 1
+HEALTHCHECK --interval=20s --timeout=3s \
+  CMD wget --spider -q http://localhost/ || exit 1
 
 EXPOSE 80
-
 CMD ["nginx", "-g", "daemon off;"]
